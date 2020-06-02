@@ -1,197 +1,453 @@
-use std::fmt;
+#[allow(unused)]
+use color_eyre::{Help, Report, Result};
+#[allow(unused)]
+use eyre::{eyre, WrapErr};
 
+#[allow(unused)]
+use tracing::{
+    debug, debug_span, error, error_span, info, info_span, instrument, trace, trace_span, warn,
+    warn_span,
+};
+
+mod logging;
+
+fn main() -> Result<()> {
+    logging::setup();
+
+    Ok(())
+}
+
+struct Universe {
+    generation: usize,
+    root: Node,
+}
+
+impl Universe {
+    fn new() -> Self {
+        Self {
+            generation: 0,
+            root: Node::new_empty_tree(3),
+        }
+    }
+
+    fn set_bit(&mut self, x: isize, y: isize) {
+        let mut copy = self.root.clone();
+        loop {
+            let max_coordinate: isize = 1 << (self.root.inode_ref().level - 1);
+            if -max_coordinate <= x
+                && x <= max_coordinate - 1
+                && -max_coordinate <= y
+                && y <= max_coordinate - 1
+            {
+                break;
+            }
+            copy = copy.expand_universe();
+        }
+
+        self.root = copy.set_bit(x, y);
+    }
+
+    fn run_step(&mut self) {
+        while self.root.inode_ref().level < 3
+            || self.root.inode_ref().nw.inode_ref().population
+                != self
+                    .root
+                    .inode_ref()
+                    .nw
+                    .inode_ref()
+                    .se
+                    .inode_ref()
+                    .se
+                    .inode_ref()
+                    .population
+            || self.root.inode_ref().ne.inode_ref().population
+                != self
+                    .root
+                    .inode_ref()
+                    .ne
+                    .inode_ref()
+                    .sw
+                    .inode_ref()
+                    .sw
+                    .inode_ref()
+                    .population
+            || self.root.inode_ref().sw.inode_ref().population
+                != self
+                    .root
+                    .inode_ref()
+                    .sw
+                    .inode_ref()
+                    .ne
+                    .inode_ref()
+                    .ne
+                    .inode_ref()
+                    .population
+            || self.root.inode_ref().se.inode_ref().population
+                != self
+                    .root
+                    .inode_ref()
+                    .se
+                    .inode_ref()
+                    .nw
+                    .inode_ref()
+                    .nw
+                    .inode_ref()
+                    .population
+        {
+            self.root = self.root.clone().expand_universe();
+        }
+
+        self.root = self.root.clone().inode().next_generation().into();
+        self.generation += 1;
+    }
+}
+
+// root
+// inner nodes / halfleaves /
+// outer nodes / leaves
+
+#[derive(Debug, Clone)]
+pub enum Node {
+    // always level 0
+    Leaf(Cell),
+    // Node::Inner can never have level 0
+    Inner(Inode),
+}
+
+#[derive(Debug, Clone)]
+pub struct Inode {
+    pub level: usize,
+    pub population: usize,
+    pub nw: Box<Node>,
+    pub ne: Box<Node>,
+    pub sw: Box<Node>,
+    pub se: Box<Node>,
+}
+
+// reduce to bit
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Cell {
-    Dead = 0,
-    Alive = 1,
+    Dead = 0u8,
+    Alive = 1u8,
 }
 
-pub struct Universe {
-    width: u32,
-    height: u32,
-    cell_size: u32,
-    cells: Vec<Cell>,
-}
-
-impl Universe {
-    fn get_index(&self, row: u32, column: u32) -> usize {
-        (row * self.width + column) as usize
+impl From<Cell> for Node {
+    fn from(cell: Cell) -> Self {
+        Node::Leaf(cell)
     }
+}
 
-    fn live_neighbor_count(&self, row: u32, column: u32) -> u8 {
-        let mut count = 0;
-        for delta_row in [self.height - 1, 0, 1].iter().cloned() {
-            for delta_col in [self.width - 1, 0, 1].iter().cloned() {
-                if delta_row == 0 && delta_col == 0 {
-                    continue;
+impl From<Cell> for Box<Node> {
+    fn from(cell: Cell) -> Self {
+        Box::new(cell.into())
+    }
+}
+
+impl From<Inode> for Node {
+    fn from(inode: Inode) -> Self {
+        Node::Inner(inode)
+    }
+}
+
+impl From<Inode> for Box<Node> {
+    fn from(inode: Inode) -> Self {
+        Box::new(inode.into())
+    }
+}
+
+impl Cell {
+    fn new(alive: bool) -> Self {
+        if alive {
+            Cell::Alive
+        } else {
+            Cell::Dead
+        }
+    }
+}
+
+impl Inode {
+    fn new(nw: Node, ne: Node, sw: Node, se: Node) -> Self {
+        match (nw, ne, sw, se) {
+            (Node::Inner(nw), Node::Inner(ne), Node::Inner(sw), Node::Inner(se)) => {
+                debug_assert!(nw.level == ne.level && ne.level == sw.level && sw.level == se.level);
+                Inode {
+                    level: nw.level + 1,
+                    population: nw.population + ne.population + sw.population + se.population,
+                    nw: nw.into(),
+                    ne: ne.into(),
+                    sw: sw.into(),
+                    se: se.into(),
                 }
-
-                let neighbor_row = (row + delta_row) % self.height;
-                let neighbor_col = (column + delta_col) % self.width;
-                let idx = self.get_index(neighbor_row, neighbor_col);
-                count += self.cells[idx] as u8;
             }
+            (Node::Leaf(nw), Node::Leaf(ne), Node::Leaf(sw), Node::Leaf(se)) => Inode {
+                level: 1,
+                population: [nw, ne, sw, se]
+                    .iter()
+                    .filter(|c| matches!(c, Cell::Alive))
+                    .count(),
+                nw: nw.into(),
+                ne: ne.into(),
+                sw: sw.into(),
+                se: se.into(),
+            },
+            _ => unreachable!(),
         }
-        count
-    }
-
-    fn get_mesh(&self, ctx: &mut Context) -> GameResult<graphics::Mesh> {
-        let mb = &mut graphics::MeshBuilder::new();
-
-        for row in 0..self.height {
-            for col in 0..self.width {
-                let idx = self.get_index(row, col);
-                let cell = self.cells[idx];
-
-                let rect = graphics::Rect::new(
-                    (col * self.cell_size) as f32,
-                    (row * self.cell_size) as f32,
-                    self.cell_size as f32,
-                    self.cell_size as f32,
-                );
-                let color = if cell == Cell::Alive {
-                    graphics::WHITE
-                } else {
-                    graphics::BLACK
-                };
-                mb.rectangle(graphics::DrawMode::fill(), rect, color);
-
-            }
-        }
-
-        mb.build(ctx)
     }
 }
 
-impl Universe {
-    pub fn new(width: u32, height: u32, cell_size: u32) -> Universe {
-        let cells = (0..width * height)
-            .map(|i| {
-                if i % 2 == 0 || i % 7 == 0 {
-                    Cell::Alive
-                } else {
-                    Cell::Dead
+impl Node {
+    #[inline(always)]
+    fn new_leaf(alive: bool) -> Self {
+        Node::Leaf(Cell::new(alive))
+    }
+
+    #[inline(always)]
+    fn new_inner(nw: Node, ne: Node, sw: Node, se: Node) -> Self {
+        Node::Inner(Inode::new(nw, ne, sw, se))
+    }
+
+    #[inline(always)]
+    fn cell(self) -> Cell {
+        if let Node::Leaf(cell) = self {
+            cell
+        } else {
+            panic!("not a leaf")
+        }
+    }
+
+    #[inline(always)]
+    fn cell_ref(&self) -> &Cell {
+        if let Node::Leaf(ref cell) = self {
+            cell
+        } else {
+            panic!("not a leaf")
+        }
+    }
+
+    #[inline(always)]
+    fn inode(self) -> Inode {
+        if let Node::Inner(inode) = self {
+            inode
+        } else {
+            panic!("not an inner")
+        }
+    }
+
+    #[inline(always)]
+    fn inode_ref(&self) -> &Inode {
+        if let Node::Inner(ref inode) = self {
+            inode
+        } else {
+            panic!("not an inner")
+        }
+    }
+}
+
+impl Node {
+    fn new_empty_tree(level: usize) -> Self {
+        if level == 0 {
+            Self::new_leaf(false)
+        } else {
+            let child = Self::new_empty_tree(level - 1);
+            Self::new_inner(child.clone(), child.clone(), child.clone(), child)
+        }
+    }
+}
+
+impl Node {
+    // TODO: check and understand
+    fn set_bit(self, x: isize, y: isize) -> Self {
+        match self {
+            Node::Leaf(_) => Self::new_leaf(true).into(),
+            Node::Inner(Inode {
+                level,
+                population,
+                nw,
+                ne,
+                sw,
+                se,
+            }) => {
+                let offset = 1 << (level - 2);
+                match (x < 0, y < 0) {
+                    (true, true) => {
+                        Self::new_inner(nw.set_bit(x + offset, y + offset), *ne, *sw, *se).into()
+                    }
+                    (true, false) => {
+                        Self::new_inner(*nw, *ne, sw.set_bit(x + offset, y - offset), *se).into()
+                    }
+                    (false, true) => {
+                        Self::new_inner(*nw, ne.set_bit(x - offset, y + offset), *sw, *se).into()
+                    }
+                    (false, false) => {
+                        Self::new_inner(*nw, *ne, *sw, se.set_bit(x - offset, y - offset)).into()
+                    }
                 }
-            })
-            .collect();
-
-        Universe {
-            width,
-            height,
-            cell_size,
-            cells,
-        }
-    }
-
-    pub fn render(&mut self, ctx: &mut Context) -> GameResult<()> {
-        graphics::clear(ctx, graphics::BLACK);
-        let mesh = self.get_mesh(ctx)?;
-        graphics::draw(ctx, &mesh, graphics::DrawParam::new())?;
-
-        graphics::present(ctx)?;
-        Ok(())
-    }
-
-    pub fn tick(&mut self) {
-        let mut next = self.cells.clone();
-
-        for row in 0..self.height {
-            for col in 0..self.width {
-                let idx = self.get_index(row, col);
-                let cell = self.cells[idx];
-                let live_neighbors = self.live_neighbor_count(row, col);
-
-                let next_cell = match (cell, live_neighbors) {
-                    (Cell::Alive, x) if x < 2 => Cell::Dead,
-                    (Cell::Alive, 2) | (Cell::Alive, 3) => Cell::Alive,
-                    (Cell::Alive, x) if x > 3 => Cell::Dead,
-                    (Cell::Dead, 3) => Cell::Alive,
-                    (otherwise, _) => otherwise,
-                };
-
-                next[idx] = next_cell;
             }
         }
-        self.cells = next;
     }
-}
 
-impl fmt::Display for Universe {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        for line in self.cells.as_slice().chunks(self.width as usize) {
-            for &cell in line {
-                let symbol = if cell == Cell::Dead { ' ' } else { '█' };
-                write!(f, "{}", symbol)?;
+    fn get_bit(&self, x: isize, y: isize) -> u16 {
+        match self {
+            Node::Leaf(c) => c.clone() as u16,
+            Node::Inner(Inode {
+                level,
+                population,
+                nw,
+                ne,
+                sw,
+                se,
+            }) => {
+                let offset = 1 << (level - 2);
+                match (x < 0, y < 0) {
+                    (true, true) => nw.get_bit(x + offset, y + offset),
+                    (true, false) => sw.get_bit(x + offset, y - offset),
+                    (false, true) => ne.get_bit(x - offset, y + offset),
+                    (false, false) => se.get_bit(x - offset, y - offset),
+                }
             }
-            write!(f, "\n")?
         }
-        Ok(())
+    }
+
+    fn expand_universe(self) -> Self {
+        let node = self.inode();
+        let border = Self::new_empty_tree(node.level - 1);
+        Self::new_inner(
+            Self::new_inner(border.clone(), border.clone(), border.clone(), *node.nw).into(),
+            Self::new_inner(border.clone(), border.clone(), *node.ne, border.clone()).into(),
+            Self::new_inner(border.clone(), *node.sw, border.clone(), border.clone()).into(),
+            Self::new_inner(*node.se, border.clone(), border.clone(), border).into(),
+        )
+        .into()
     }
 }
 
-// MAIN
-use ggez::event::{self, EventHandler};
-use ggez::{graphics, Context, ContextBuilder, GameResult};
+impl Inode {
+    fn centered_sub(&self) -> Self {
+        Self::new(
+            *self.nw.inode_ref().se.clone(),
+            *self.ne.inode_ref().sw.clone(),
+            *self.sw.inode_ref().ne.clone(),
+            *self.se.inode_ref().nw.clone(),
+        )
+    }
 
-pub struct App {
-    universe: Universe,
-}
+    fn centered_horizontal(west: &Self, east: &Self) -> Self {
+        debug_assert!(west.level == east.level, "levels must be the same");
 
-impl App {
-    pub fn new(
-        _ctx: &mut Context,
-        universe_width: u32,
-        universe_height: u32,
-        cell_size: u32,
-    ) -> App {
-        let universe = Universe::new(universe_width, universe_height, cell_size);
-        App { universe }
+        Self::new(
+            *west.ne.inode_ref().se.clone(),
+            *east.nw.inode_ref().sw.clone(),
+            *west.se.inode_ref().ne.clone(),
+            *east.sw.inode_ref().nw.clone(),
+        )
+    }
+
+    fn centered_vertical(north: &Self, south: &Self) -> Self {
+        debug_assert!(north.level == south.level, "levels must be the same");
+
+        Self::new(
+            *north.sw.inode_ref().se.clone(),
+            *north.se.inode_ref().sw.clone(),
+            *south.sw.inode_ref().ne.clone(),
+            *south.ne.inode_ref().nw.clone(),
+        )
+    }
+
+    fn centered_subsub(&self) -> Self {
+        Self::new(
+            *self.nw.inode_ref().se.inode_ref().se.clone(),
+            *self.ne.inode_ref().sw.inode_ref().sw.clone(),
+            *self.sw.inode_ref().ne.inode_ref().ne.clone(),
+            *self.se.inode_ref().nw.inode_ref().nw.clone(),
+        )
+    }
+
+    fn next_generation(self) -> Self {
+        debug_assert!(self.level >= 2, "must be level 2 or higher");
+
+        if self.level == 2 {
+            Node::manual_simulation(self.into()).inode()
+        } else {
+            let n00 = self.nw.inode_ref().centered_sub();
+            let n01 = Self::centered_horizontal(self.nw.inode_ref(), self.ne.inode_ref());
+            let n02 = self.ne.inode_ref().centered_sub();
+            let n10 = Self::centered_vertical(self.nw.inode_ref(), self.sw.inode_ref());
+            let n11 = self.centered_subsub();
+            let n12 = Self::centered_vertical(self.ne.inode_ref(), self.se.inode_ref());
+            let n20 = self.sw.inode_ref().centered_sub();
+            let n21 = Self::centered_horizontal(self.sw.inode_ref(), self.se.inode_ref());
+            let n22 = self.se.inode_ref().centered_sub();
+
+            Self::new(
+                Self::new(
+                    n00.into(),
+                    n01.clone().into(),
+                    n10.clone().into(),
+                    n11.clone().into(),
+                )
+                .next_generation()
+                .into(),
+                Self::new(
+                    n01.into(),
+                    n02.into(),
+                    n11.clone().into(),
+                    n12.clone().into(),
+                )
+                .next_generation()
+                .into(),
+                Self::new(
+                    n10.into(),
+                    n11.clone().into(),
+                    n20.into(),
+                    n21.clone().into(),
+                )
+                .next_generation()
+                .into(),
+                Self::new(n11.into(), n12.into(), n21.into(), n22.into())
+                    .next_generation()
+                    .into(),
+            )
+        }
     }
 }
 
-impl EventHandler for App {
-    fn update(&mut self, _ctx: &mut Context) -> GameResult<()> {
-        self.universe.tick();
-        Ok(())
+impl Node {
+    fn manual_simulation(self) -> Self {
+        let inode = self.inode_ref();
+        debug_assert!(inode.level == 2, "manual simulation only for level 2");
+
+        let mut all_bits = 0;
+        for y in -2..2 {
+            for x in -2..2 {
+                // TODO: check if clone is necessary
+                all_bits = (all_bits << 1) + self.get_bit(x, y);
+            }
+        }
+        Self::new_inner(
+            Self::one_gen(all_bits >> 5).into(),
+            Self::one_gen(all_bits >> 4).into(),
+            Self::one_gen(all_bits >> 1).into(),
+            Self::one_gen(all_bits).into(),
+        )
     }
 
-    fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
-        graphics::clear(ctx, graphics::WHITE);
+    fn one_gen(mut bitmask: u16) -> Self {
+        if bitmask == 0 {
+            return Self::new_leaf(false);
+        }
 
-        self.universe.render(ctx)?;
-
-        graphics::present(ctx) // returns GameResult
-    }
-}
-
-fn main() {
-    let width: u32 = 256;
-    let height: u32 = 256;
-    let cell_size: u32 = 4;
-
-    let setup = ggez::conf::WindowSetup {
-        title: "Game of Life".to_owned(),
-        samples: ggez::conf::NumSamples::Zero,
-        vsync: true,
-        icon: "".to_owned(),
-        srgb: true,
-    };
-
-    let mode = ggez::conf::WindowMode::default()
-        .dimensions(128.0 * 8.0, 128.0 * 8.0)
-        .resizable(true);
-
-    let (mut ctx, mut event_loop) = ContextBuilder::new("my_app", "lwirth")
-        .window_setup(setup)
-        .window_mode(mode)
-        .build()
-        .expect("ggez context could not be created");
-
-    let mut app = App::new(&mut ctx, width, height, cell_size);
-
-    match event::run(&mut ctx, &mut event_loop, &mut app) {
-        Ok(_) => println!("exited cleanly"),
-        Err(e) => println! {"error occured: {}", e},
+        let me = (bitmask >> 5) & 1;
+        bitmask &= 0x757; // mask out bits we don't care about (?)
+        let mut neighbor_count = 0;
+        while bitmask != 0 {
+            neighbor_count += 1;
+            bitmask &= bitmask - 1; // clear least significant bit
+        }
+        if neighbor_count == 3 || (neighbor_count == 2 && me != 0) {
+            Self::new_leaf(true)
+        } else {
+            Self::new_leaf(false)
+        }
     }
 }

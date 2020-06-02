@@ -6,5 +6,15 @@ edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[profile.release]
+debug = true
+
 [dependencies]
-ggez = "0.5"
+ggez = "0.5.1"
+
+thiserror = "1.0.19"
+eyre = "0.4.3"
+color-eyre = { version = "0.3.2", features = [ "capture-spantrace"] }
+tracing = "0.1.14"
+tracing-error = "0.1.2"
+tracing-subscriber = { version = "0.2.5", features = [ "env-filter" ] }
