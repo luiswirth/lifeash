@@ -1,6 +1,4 @@
-fn main() -> Result<()> {
-    logging::setup();
-
+pub fn run() -> Result<()> {
     let width: u32 = 256;
     let height: u32 = 256;
     let cell_size: u32 = 4;

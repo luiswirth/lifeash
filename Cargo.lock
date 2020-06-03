@@ -837,6 +837,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "hasherlife"
+version = "0.1.0"
+dependencies = [
+ "color-eyre 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "eyre 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ggez 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "thiserror 1.0.19 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tracing 0.1.14 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tracing-error 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tracing-subscriber 0.2.5 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "hermit-abi"
 version = "0.1.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -958,19 +971,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "libc 0.2.71 (registry+https://github.com/rust-lang/crates.io-index)",
  "pkg-config 0.3.17 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "life"
-version = "0.1.0"
-dependencies = [
- "color-eyre 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "eyre 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "ggez 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "thiserror 1.0.19 (registry+https://github.com/rust-lang/crates.io-index)",
- "tracing 0.1.14 (registry+https://github.com/rust-lang/crates.io-index)",
- "tracing-error 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "tracing-subscriber 0.2.5 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
