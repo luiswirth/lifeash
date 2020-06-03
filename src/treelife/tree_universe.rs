@@ -22,6 +22,10 @@ impl TreeUniverse {
 }
 
 impl Universe for TreeUniverse {
+    fn get_bit(&self, x: isize, y: isize) -> u16 {
+        self.root.get_bit(x, y)
+    }
+
     fn set_bit(&mut self, x: isize, y: isize) {
         let mut copy = self.root.clone();
         loop {

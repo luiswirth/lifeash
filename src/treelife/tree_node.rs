@@ -306,22 +306,36 @@ impl Inode {
 }
 
 impl Node {
+    // Inode at level 2 contains 16 cells
+    // these can be represented by a bitmap of u16
+
+    // to update a cell be have to look at 9 cells (itself and the 8 directly adjecent ones)
+    // so we still have to use a u16 bitmap.
+
+    // the bottom three bits 0..=2 are the south neighbors
+    // bits 4..=6 are the current row with 5 being the cell itself
+    // 8..=10 are the north neighbors
+
+    // 15 14 13 12
+    // 11 10  9  8
+    //  7  6  5  4
+    //  3  2  1  0
+
     pub(super) fn manual_simulation(self) -> Self {
         let inode = self.inode_ref();
         debug_assert!(inode.level == 2, "manual simulation only for level 2");
 
-        let mut all_bits = 0;
+        let mut all_bits: u16 = 0;
         for y in -2..2 {
             for x in -2..2 {
-                // TODO: check if clone is necessary
                 all_bits = (all_bits << 1) + self.get_bit(x, y);
             }
         }
         Self::new_inner(
-            Self::one_gen(all_bits >> 5),
-            Self::one_gen(all_bits >> 4),
-            Self::one_gen(all_bits >> 1),
-            Self::one_gen(all_bits),
+            Self::one_gen(all_bits >> 5), // nw
+            Self::one_gen(all_bits >> 4), // ne
+            Self::one_gen(all_bits >> 1), // sw
+            Self::one_gen(all_bits),      // se
         )
     }
 

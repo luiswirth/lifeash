@@ -18,8 +18,9 @@ mod universe;
 fn main() -> Result<()> {
     logging::setup();
 
-    let mut simulator = simulator::Simulator::new();
-    simulator.run()?;
+    simulator::start_simulator()?;
 
     Ok(())
 }
+
+// use logging to figure out problem
