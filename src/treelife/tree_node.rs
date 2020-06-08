@@ -269,7 +269,7 @@ impl Inode {
         Self::new(
             *north.sw.inode_ref().se.clone(),
             *north.se.inode_ref().sw.clone(),
-            *south.sw.inode_ref().ne.clone(),
+            *south.nw.inode_ref().ne.clone(),
             *south.ne.inode_ref().nw.clone(),
         )
     }
@@ -335,18 +335,13 @@ impl Inode {
 impl Node {
     // Inode at level 2 contains 16 cells
     // these can be represented by a bitmap of u16
+    // p is at position (-2, -2) and a at (1, 1)
 
-    // to update a cell be have to look at 9 cells (itself and the 8 directly adjecent ones)
-    // so we still have to use a u16 bitmap.
-
-    // the bottom three bits 0..=2 are the south neighbors
-    // bits 4..=6 are the current row with 5 being the cell itself
-    // 8..=10 are the north neighbors
-
-    // 15 14 13 12
-    // 11 10  9  8
-    //  7  6  5  4
-    //  3  2  1  0
+    // p o n m
+    // l k j i
+    // h g f e
+    // d c b a
+    // 0b_ponm_lkji_hgfe_dcba
 
     pub fn manual_simulation(self) -> Self {
         let inode = self.inode_ref();
@@ -366,19 +361,23 @@ impl Node {
         )
     }
 
+    // to update a cell be have to look at 9 cells (itself and the 8 directly adjecent ones)
+    // so we still have to use a u16 bitmap.
+
+    // the bottom three bits a..=c are the south neighbors
+    // bits e..=g are the current row with 5 being the cell itself
+    // i..=k are the north neighbors
+
+    #[allow(clippy::inconsistent_digit_grouping)]
     pub fn one_gen(mut bitmask: u16) -> Self {
         if bitmask == 0 {
             return Self::new_leaf(false);
         }
 
-        let me = (bitmask >> 5) & 1;
-        bitmask &= 0x757; // mask out bits we don't care about (?)
-        let mut neighbor_count = 0;
-        while bitmask != 0 {
-            neighbor_count += 1;
-            bitmask &= bitmask - 1; // clear least significant bit
-        }
-        if neighbor_count == 3 || (neighbor_count == 2 && me != 0) {
+        let center = (bitmask >> 5) & 1;
+        bitmask &= 0b00000__111_0101_0111; // mask out bits we don't care about (?)
+        let neighbor_count = bitmask.count_ones();
+        if neighbor_count == 3 || (neighbor_count == 2 && center != 0) {
             Self::new_leaf(true)
         } else {
             Self::new_leaf(false)
