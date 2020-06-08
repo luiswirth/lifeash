@@ -4,7 +4,9 @@ pub use tracing::{
     warn_span,
 };
 
-#[derive(Debug, Clone)]
+use std::hash::{Hash, Hasher};
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Node {
     // always level 0
     Leaf(Cell),
@@ -16,15 +18,32 @@ pub enum Node {
 pub struct Inode {
     level: u32,
     population: u32,
+    result: Option<Box<Inode>>,
     pub nw: Box<Node>,
     pub ne: Box<Node>,
     pub sw: Box<Node>,
     pub se: Box<Node>,
 }
 
+impl PartialEq for Inode {
+    fn eq(&self, other: &Self) -> bool {
+        self.nw == other.nw && self.ne == other.ne && self.sw == other.sw && self.se == other.se
+    }
+}
+impl Eq for Inode {}
+
+impl Hash for Inode {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.nw.hash(state);
+        self.ne.hash(state);
+        self.sw.hash(state);
+        self.se.hash(state);
+    }
+}
+
 // reduce to bit
 #[repr(u8)]
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum Cell {
     Dead = 0u8,
     Alive = 1u8,
@@ -72,6 +91,7 @@ impl Inode {
                 Inode {
                     level: nw.level + 1,
                     population: nw.population + ne.population + sw.population + se.population,
+                    result: None,
                     nw: nw.into(),
                     ne: ne.into(),
                     sw: sw.into(),
@@ -84,6 +104,7 @@ impl Inode {
                     .iter()
                     .filter(|c| matches!(c, Cell::Alive))
                     .count() as u32,
+                result: None,
                 nw: nw.into(),
                 ne: ne.into(),
                 sw: sw.into(),
@@ -179,6 +200,7 @@ impl Node {
             Node::Inner(Inode {
                 level,
                 population: _,
+                result: _,
                 ref nw,
                 ref ne,
                 ref sw,
@@ -205,6 +227,7 @@ impl Node {
             Node::Inner(Inode {
                 level,
                 population: _,
+                result: _,
                 nw,
                 ne,
                 sw,
@@ -283,8 +306,12 @@ impl Inode {
         )
     }
 
-    pub fn next_generation(self) -> Self {
+    pub fn next_generation(mut self) -> Self {
         debug_assert!(self.level >= 2, "must be level 2 or higher");
+
+        if let Some(result) = self.result {
+            return *result;
+        }
 
         if self.level == 2 {
             Node::manual_simulation(self.into()).inode()
@@ -299,7 +326,7 @@ impl Inode {
             let n21 = Self::centered_horizontal(self.sw.inode_ref(), self.se.inode_ref());
             let n22 = self.se.inode_ref().centered_sub();
 
-            Self::new(
+            self.result = Some(Box::new(Self::new(
                 Self::new(
                     n00.into(),
                     n01.clone().into(),
@@ -327,7 +354,9 @@ impl Inode {
                 Self::new(n11.into(), n12.into(), n21.into(), n22.into())
                     .next_generation()
                     .into(),
-            )
+            )));
+
+            *self.result.unwrap()
         }
     }
 }
