@@ -22,30 +22,29 @@ impl TreeUniverse {
 }
 
 impl Universe for TreeUniverse {
-    fn get_bit(&self, x: isize, y: isize) -> u16 {
+    fn get_bit(&self, x: i32, y: i32) -> u16 {
         self.root.get_bit(x, y)
     }
 
-    fn set_bit(&mut self, x: isize, y: isize) {
+    fn set_bit(&mut self, x: i32, y: i32, alive: bool) {
+        // TODO: remove copy?
         let mut copy = self.root.clone();
         loop {
-            let max_coordinate: isize = 1 << (self.root.inode_ref().level - 1);
-            if -max_coordinate <= x
-                && x < max_coordinate
-                && -max_coordinate <= y
-                && y < max_coordinate
-            {
+            // check coordiante bounds
+            let max = 2i32.pow(copy.level() - 1);
+            let bound = (-max)..(max);
+            if bound.contains(&x) && bound.contains(&y) {
                 break;
             }
             copy = copy.expand_universe();
         }
 
-        self.root = copy.set_bit(x, y);
+        self.root = copy.set_bit(x, y, alive);
     }
 
     fn run_step(&mut self) {
-        while self.root.inode_ref().level < 3
-            || self.root.inode_ref().nw.inode_ref().population
+        while self.root.level() < 3
+            || self.root.inode_ref().nw.population()
                 != self
                     .root
                     .inode_ref()
@@ -54,9 +53,8 @@ impl Universe for TreeUniverse {
                     .se
                     .inode_ref()
                     .se
-                    .inode_ref()
-                    .population
-            || self.root.inode_ref().ne.inode_ref().population
+                    .population()
+            || self.root.inode_ref().ne.population()
                 != self
                     .root
                     .inode_ref()
@@ -65,9 +63,8 @@ impl Universe for TreeUniverse {
                     .sw
                     .inode_ref()
                     .sw
-                    .inode_ref()
-                    .population
-            || self.root.inode_ref().sw.inode_ref().population
+                    .population()
+            || self.root.inode_ref().sw.population()
                 != self
                     .root
                     .inode_ref()
@@ -76,9 +73,8 @@ impl Universe for TreeUniverse {
                     .ne
                     .inode_ref()
                     .ne
-                    .inode_ref()
-                    .population
-            || self.root.inode_ref().se.inode_ref().population
+                    .population()
+            || self.root.inode_ref().se.population()
                 != self
                     .root
                     .inode_ref()
@@ -87,8 +83,7 @@ impl Universe for TreeUniverse {
                     .nw
                     .inode_ref()
                     .nw
-                    .inode_ref()
-                    .population
+                    .population()
         {
             self.root = self.root.clone().expand_universe();
         }

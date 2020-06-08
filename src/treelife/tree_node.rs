@@ -5,7 +5,7 @@ pub use tracing::{
 };
 
 #[derive(Debug, Clone)]
-pub(super) enum Node {
+pub enum Node {
     // always level 0
     Leaf(Cell),
     // Node::Inner can never have level 0
@@ -13,19 +13,19 @@ pub(super) enum Node {
 }
 
 #[derive(Debug, Clone)]
-pub(super) struct Inode {
-    pub(super) level: usize,
-    pub(super) population: usize,
-    pub(super) nw: Box<Node>,
-    pub(super) ne: Box<Node>,
-    pub(super) sw: Box<Node>,
-    pub(super) se: Box<Node>,
+pub struct Inode {
+    level: u32,
+    population: u32,
+    pub nw: Box<Node>,
+    pub ne: Box<Node>,
+    pub sw: Box<Node>,
+    pub se: Box<Node>,
 }
 
 // reduce to bit
 #[repr(u8)]
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub(super) enum Cell {
+pub enum Cell {
     Dead = 0u8,
     Alive = 1u8,
 }
@@ -65,7 +65,7 @@ impl Cell {
 }
 
 impl Inode {
-    pub(super) fn new(nw: Node, ne: Node, sw: Node, se: Node) -> Self {
+    pub fn new(nw: Node, ne: Node, sw: Node, se: Node) -> Self {
         match (nw, ne, sw, se) {
             (Node::Inner(nw), Node::Inner(ne), Node::Inner(sw), Node::Inner(se)) => {
                 debug_assert!(nw.level == ne.level && ne.level == sw.level && sw.level == se.level);
@@ -83,7 +83,7 @@ impl Inode {
                 population: [nw, ne, sw, se]
                     .iter()
                     .filter(|c| matches!(c, Cell::Alive))
-                    .count(),
+                    .count() as u32,
                 nw: nw.into(),
                 ne: ne.into(),
                 sw: sw.into(),
@@ -96,18 +96,18 @@ impl Inode {
 
 impl Node {
     #[inline(always)]
-    pub(super) fn new_leaf(alive: bool) -> Self {
+    pub fn new_leaf(alive: bool) -> Self {
         Node::Leaf(Cell::new(alive))
     }
 
     #[inline(always)]
-    pub(super) fn new_inner(nw: Node, ne: Node, sw: Node, se: Node) -> Self {
+    pub fn new_inner(nw: Node, ne: Node, sw: Node, se: Node) -> Self {
         Node::Inner(Inode::new(nw, ne, sw, se))
     }
 
     #[allow(unused)]
     #[inline(always)]
-    pub(super) fn cell(self) -> Cell {
+    pub fn cell(self) -> Cell {
         if let Node::Leaf(cell) = self {
             cell
         } else {
@@ -117,7 +117,7 @@ impl Node {
 
     #[allow(unused)]
     #[inline(always)]
-    pub(super) fn cell_ref(&self) -> &Cell {
+    pub fn cell_ref(&self) -> &Cell {
         if let Node::Leaf(ref cell) = self {
             cell
         } else {
@@ -126,7 +126,7 @@ impl Node {
     }
 
     #[inline(always)]
-    pub(super) fn inode(self) -> Inode {
+    pub fn inode(self) -> Inode {
         if let Node::Inner(inode) = self {
             inode
         } else {
@@ -135,17 +135,33 @@ impl Node {
     }
 
     #[inline(always)]
-    pub(super) fn inode_ref(&self) -> &Inode {
+    pub fn inode_ref(&self) -> &Inode {
         if let Node::Inner(ref inode) = self {
             inode
         } else {
             panic!("not an inner")
         }
     }
+
+    #[inline(always)]
+    pub fn population(&self) -> u32 {
+        match *self {
+            Node::Inner(ref i) => i.population,
+            Node::Leaf(c) => c as u32,
+        }
+    }
+
+    #[inline(always)]
+    pub fn level(&self) -> u32 {
+        match *self {
+            Node::Inner(ref i) => i.level,
+            Node::Leaf(_) => 0,
+        }
+    }
 }
 
 impl Node {
-    pub(super) fn new_empty_tree(level: usize) -> Self {
+    pub fn new_empty_tree(level: u32) -> Self {
         if level == 0 {
             Self::new_leaf(false)
         } else {
@@ -156,55 +172,22 @@ impl Node {
 }
 
 impl Node {
-    // TODO: check and understand
-    pub(super) fn set_bit(self, x: isize, y: isize) -> Self {
-        match self {
-            Node::Leaf(_) => Self::new_leaf(true),
+    pub fn get_bit(&self, x: i32, y: i32) -> u16 {
+        match *self {
+            // independent of x and y
+            Node::Leaf(c) => c as u16,
             Node::Inner(Inode {
                 level,
                 population: _,
-                nw,
-                ne,
-                sw,
-                se,
+                ref nw,
+                ref ne,
+                ref sw,
+                ref se,
             }) => {
-                trace!("setting bit at level {} with ({}, {})", level, x, y);
-                let offset = 1 << (level as isize - 2);
-                trace!("offset: {}", offset);
-                match (x < 0, y < 0) {
-                    (true, true) => {
-                        trace!("following nw");
-                        Self::new_inner(nw.set_bit(x + offset, y + offset), *ne, *sw, *se)
-                    }
-                    (true, false) => {
-                        trace!("following sw");
-                        Self::new_inner(*nw, *ne, sw.set_bit(x + offset, y - offset), *se)
-                    }
-                    (false, true) => {
-                        trace!("following ne");
-                        Self::new_inner(*nw, ne.set_bit(x - offset, y + offset), *sw, *se)
-                    }
-                    (false, false) => {
-                        trace!("following se");
-                        Self::new_inner(*nw, *ne, *sw, se.set_bit(x - offset, y - offset))
-                    }
-                }
-            }
-        }
-    }
-
-    pub(super) fn get_bit(&self, x: isize, y: isize) -> u16 {
-        match self {
-            Node::Leaf(c) => *c as u16,
-            Node::Inner(Inode {
-                level,
-                population: _,
-                nw,
-                ne,
-                sw,
-                se,
-            }) => {
-                let offset = 1 << (level - 2);
+                // transform to relative coordinate space
+                // coordinates are not used at level 1, therefore the value doesn't matter. We default it to 0
+                let offset = if level >= 2 { 1 << (level - 2) } else { 0 };
+                //let offset = 2i32.checked_pow(level - 2).unwrap_or(0);
                 match (x < 0, y < 0) {
                     (true, true) => nw.get_bit(x + offset, y + offset),
                     (true, false) => sw.get_bit(x + offset, y - offset),
@@ -215,7 +198,39 @@ impl Node {
         }
     }
 
-    pub(super) fn expand_universe(self) -> Self {
+    pub fn set_bit(self, x: i32, y: i32, alive: bool) -> Self {
+        match self {
+            // independent of x and y
+            Node::Leaf(_) => Self::new_leaf(alive),
+            Node::Inner(Inode {
+                level,
+                population: _,
+                nw,
+                ne,
+                sw,
+                se,
+            }) => {
+                // coordinates are not used at level 1, therefore the value doesn't matter. We default it to 0
+                let offset = if level >= 2 { 1 << (level - 2) } else { 0 };
+                match (x < 0, y < 0) {
+                    (true, true) => {
+                        Self::new_inner(nw.set_bit(x + offset, y + offset, alive), *ne, *sw, *se)
+                    }
+                    (true, false) => {
+                        Self::new_inner(*nw, *ne, sw.set_bit(x + offset, y - offset, alive), *se)
+                    }
+                    (false, true) => {
+                        Self::new_inner(*nw, ne.set_bit(x - offset, y + offset, alive), *sw, *se)
+                    }
+                    (false, false) => {
+                        Self::new_inner(*nw, *ne, *sw, se.set_bit(x - offset, y - offset, alive))
+                    }
+                }
+            }
+        }
+    }
+
+    pub fn expand_universe(self) -> Self {
         let node = self.inode();
         let border = Self::new_empty_tree(node.level - 1);
         Self::new_inner(
@@ -228,7 +243,7 @@ impl Node {
 }
 
 impl Inode {
-    pub(super) fn centered_sub(&self) -> Self {
+    pub fn centered_sub(&self) -> Self {
         Self::new(
             *self.nw.inode_ref().se.clone(),
             *self.ne.inode_ref().sw.clone(),
@@ -237,7 +252,7 @@ impl Inode {
         )
     }
 
-    pub(super) fn centered_horizontal(west: &Self, east: &Self) -> Self {
+    pub fn centered_horizontal(west: &Self, east: &Self) -> Self {
         debug_assert!(west.level == east.level, "levels must be the same");
 
         Self::new(
@@ -248,7 +263,7 @@ impl Inode {
         )
     }
 
-    pub(super) fn centered_vertical(north: &Self, south: &Self) -> Self {
+    pub fn centered_vertical(north: &Self, south: &Self) -> Self {
         debug_assert!(north.level == south.level, "levels must be the same");
 
         Self::new(
@@ -259,7 +274,7 @@ impl Inode {
         )
     }
 
-    pub(super) fn centered_subsub(&self) -> Self {
+    pub fn centered_subsub(&self) -> Self {
         Self::new(
             *self.nw.inode_ref().se.inode_ref().se.clone(),
             *self.ne.inode_ref().sw.inode_ref().sw.clone(),
@@ -268,7 +283,7 @@ impl Inode {
         )
     }
 
-    pub(super) fn next_generation(self) -> Self {
+    pub fn next_generation(self) -> Self {
         debug_assert!(self.level >= 2, "must be level 2 or higher");
 
         if self.level == 2 {
@@ -333,7 +348,7 @@ impl Node {
     //  7  6  5  4
     //  3  2  1  0
 
-    pub(super) fn manual_simulation(self) -> Self {
+    pub fn manual_simulation(self) -> Self {
         let inode = self.inode_ref();
         debug_assert!(inode.level == 2, "manual simulation only for level 2");
 
@@ -351,7 +366,7 @@ impl Node {
         )
     }
 
-    pub(super) fn one_gen(mut bitmask: u16) -> Self {
+    pub fn one_gen(mut bitmask: u16) -> Self {
         if bitmask == 0 {
             return Self::new_leaf(false);
         }

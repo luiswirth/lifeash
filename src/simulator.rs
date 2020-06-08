@@ -28,6 +28,7 @@ impl Simulator {
 
     pub fn run(&mut self) {
         loop {
+            self.render();
             self.update();
         }
     }
@@ -36,13 +37,36 @@ impl Simulator {
         self.universe.run_step();
     }
 
+    pub fn render(&self) {
+        for y in -8..8 {
+            for x in -8..8 {
+                let alive = match self.universe.get_bit(x, y) {
+                    0 => false,
+                    1 => true,
+                    _ => unreachable!(),
+                };
+                if alive {
+                    print!("o");
+                } else {
+                    print!(" ");
+                }
+            }
+            println!();
+        }
+        println!();
+
+        //std::thread::sleep(std::time::Duration::from_millis(1000));
+        let mut string = String::new();
+        std::io::stdin().read_line(&mut string).unwrap();
+    }
+
     pub fn read_pattern(&mut self) -> Result<()> {
         let mut line = String::new();
         let stdin = std::io::stdin();
         let mut handle = stdin.lock();
 
         let (mut x, mut y) = (0, 0);
-        let mut argument = 0;
+        let mut argument: u32 = 0;
 
         while handle.read_line(&mut line)? != 0 {
             if line.starts_with('x') || line.starts_with('#') {
@@ -50,7 +74,7 @@ impl Simulator {
             }
             let line = line.trim();
             for c in line.chars() {
-                let parameter = if argument == 0 { 1 } else { argument };
+                let parameter: u32 = if argument == 0 { 1 } else { argument };
 
                 match c {
                     'b' => {
@@ -59,8 +83,8 @@ impl Simulator {
                     }
                     'o' => {
                         for _ in 0..parameter {
+                            self.universe.set_bit(x as i32, y as i32, true);
                             x += 1;
-                            self.universe.set_bit(x, y)
                         }
                         argument = 0
                     }
@@ -69,10 +93,10 @@ impl Simulator {
                         x = 0;
                         argument = 0;
                     }
-                    _ if c.is_digit(10) => {
-                        argument = 10 * argument + c.to_digit(10).unwrap() as isize
-                    }
                     '!' => return Ok(()),
+                    _ if c.is_digit(10) => {
+                        argument = 10 * argument + c.to_digit(10).unwrap();
+                    }
                     _ => panic!("invalid char"),
                 }
             }
