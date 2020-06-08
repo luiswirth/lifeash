@@ -3,39 +3,16 @@ use color_eyre::{Help, Report, Result};
 #[allow(unused)]
 use eyre::{eyre, WrapErr};
 
-use std::io::prelude::*;
+#[allow(unused)]
+pub use tracing::{
+    debug, debug_span, error, error_span, info, info_span, instrument, trace, trace_span, warn,
+    warn_span,
+};
 
-use ggez::event::{self, EventHandler};
-use ggez::{graphics, Context, ContextBuilder, GameResult};
+use std::io::prelude::*;
 
 use crate::treelife::tree_universe::TreeUniverse;
 use crate::universe::Universe;
-
-const CELL_SIZE: isize = 5;
-
-pub fn start_simulator() -> Result<()> {
-    let setup = ggez::conf::WindowSetup {
-        title: "Game of Life".to_owned(),
-        samples: ggez::conf::NumSamples::Zero,
-        vsync: true,
-        icon: "".to_owned(),
-        srgb: true,
-    };
-
-    let mode = ggez::conf::WindowMode::default().resizable(true);
-
-    let (mut ctx, mut event_loop) = ContextBuilder::new("life", "Luis Wirth")
-        .window_setup(setup)
-        .window_mode(mode)
-        .build()
-        .expect("ggez context could not be created");
-
-    let mut app = Simulator::new();
-    app.read_pattern()?;
-
-    event::run(&mut ctx, &mut event_loop, &mut app).wrap_err("error occured")?;
-    Ok(())
-}
 
 pub struct Simulator {
     universe: Box<dyn Universe>,
@@ -48,63 +25,18 @@ impl Simulator {
             universe: Box::new(TreeUniverse::new()),
         }
     }
-}
 
-impl EventHandler for Simulator {
-    fn update(&mut self, _ctx: &mut Context) -> GameResult<()> {
-        self.universe.run_step();
-        Ok(())
-    }
-
-    fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
-        graphics::clear(ctx, graphics::BLACK);
-        let mesh = self.get_mesh(ctx)?;
-        graphics::draw(ctx, &mesh, graphics::DrawParam::new())?;
-
-        graphics::present(ctx)
-    }
-}
-
-impl Simulator {
-    fn get_mesh(&self, ctx: &mut Context) -> GameResult<graphics::Mesh> {
-        //self.universe.get_bit()
-
-        let size = graphics::window(ctx).get_inner_size().unwrap();
-        let (width, height) = (size.width as isize, size.height as isize);
-
-        let mb = &mut graphics::MeshBuilder::new();
-
-        for y in 0..height {
-            for x in 0..width {
-                let rect = graphics::Rect::new(
-                    (x * CELL_SIZE) as f32,
-                    (y * CELL_SIZE) as f32,
-                    CELL_SIZE as f32,
-                    CELL_SIZE as f32,
-                );
-
-                let bit = self.universe.get_bit(x, y);
-
-                let color = if bit == 0 {
-                    graphics::BLACK
-                } else {
-                    graphics::WHITE
-                };
-
-                mb.rectangle(graphics::DrawMode::fill(), rect, color);
-            }
+    pub fn run(&mut self) {
+        loop {
+            self.update();
         }
-
-        //let x = col as f32;
-        //let y = row as f32;
-        //let r: u8 = (x + y) as u8;
-        //let g: u8 = (x / y) as u8;
-        //let b: u8 = (x * y) as u8;
-
-        mb.build(ctx)
     }
 
-    fn read_pattern(&mut self) -> Result<()> {
+    fn update(&mut self) {
+        self.universe.run_step();
+    }
+
+    pub fn read_pattern(&mut self) -> Result<()> {
         let mut line = String::new();
         let stdin = std::io::stdin();
         let mut handle = stdin.lock();

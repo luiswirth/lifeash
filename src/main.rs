@@ -9,18 +9,24 @@ pub use tracing::{
     warn_span,
 };
 
-mod app;
 mod logging;
 mod simulator;
 mod treelife;
 mod universe;
 
+use simulator::Simulator;
+
 fn main() -> Result<()> {
     logging::setup();
 
-    simulator::start_simulator()?;
+    info!("starting simulator");
+    let mut simulator = Simulator::new();
+    info!("reading pattern");
+    simulator.read_pattern()?;
+    info!("finished reading pattern");
+
+    info!("start simulation loop");
+    simulator.run();
 
     Ok(())
 }
-
-// use logging to figure out problem

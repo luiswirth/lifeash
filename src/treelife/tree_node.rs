@@ -1,3 +1,9 @@
+#[allow(unused)]
+pub use tracing::{
+    debug, debug_span, error, error_span, info, info_span, instrument, trace, trace_span, warn,
+    warn_span,
+};
+
 #[derive(Debug, Clone)]
 pub(super) enum Node {
     // always level 0
@@ -162,18 +168,24 @@ impl Node {
                 sw,
                 se,
             }) => {
-                let offset = 1 << (level - 2);
+                trace!("setting bit at level {} with ({}, {})", level, x, y);
+                let offset = 1 << (level as isize - 2);
+                trace!("offset: {}", offset);
                 match (x < 0, y < 0) {
                     (true, true) => {
+                        trace!("following nw");
                         Self::new_inner(nw.set_bit(x + offset, y + offset), *ne, *sw, *se)
                     }
                     (true, false) => {
+                        trace!("following sw");
                         Self::new_inner(*nw, *ne, sw.set_bit(x + offset, y - offset), *se)
                     }
                     (false, true) => {
+                        trace!("following ne");
                         Self::new_inner(*nw, ne.set_bit(x - offset, y + offset), *sw, *se)
                     }
                     (false, false) => {
+                        trace!("following se");
                         Self::new_inner(*nw, *ne, *sw, se.set_bit(x - offset, y - offset))
                     }
                 }
