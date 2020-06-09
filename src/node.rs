@@ -6,6 +6,8 @@ pub use tracing::{
 
 use std::hash::{Hash, Hasher};
 
+use crate::core::{Level, Position, Quadrant::*};
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Node {
     // always level 0
@@ -16,7 +18,7 @@ pub enum Node {
 
 #[derive(Debug, Clone)]
 pub struct Inode {
-    level: u32,
+    level: Level,
     population: u32,
     result: Option<Box<Inode>>,
     pub nw: Box<Node>,
@@ -43,7 +45,7 @@ impl Hash for Inode {
 
 // reduce to bit
 #[repr(u8)]
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Cell {
     Dead = 0u8,
     Alive = 1u8,
@@ -81,6 +83,13 @@ impl Cell {
             Cell::Dead
         }
     }
+
+    pub fn alive(&self) -> bool {
+        match *self {
+            Cell::Dead => false,
+            Cell::Alive => true,
+        }
+    }
 }
 
 impl Inode {
@@ -99,7 +108,7 @@ impl Inode {
                 }
             }
             (Node::Leaf(nw), Node::Leaf(ne), Node::Leaf(sw), Node::Leaf(se)) => Inode {
-                level: 1,
+                level: Level(1),
                 population: [nw, ne, sw, se]
                     .iter()
                     .filter(|c| matches!(c, Cell::Alive))
@@ -173,17 +182,17 @@ impl Node {
     }
 
     #[inline(always)]
-    pub fn level(&self) -> u32 {
+    pub fn level(&self) -> Level {
         match *self {
             Node::Inner(ref i) => i.level,
-            Node::Leaf(_) => 0,
+            Node::Leaf(_) => Level::LEAF_LEVEL,
         }
     }
 }
 
 impl Node {
-    pub fn new_empty_tree(level: u32) -> Self {
-        if level == 0 {
+    pub fn new_empty_tree(level: Level) -> Self {
+        if level == Level::LEAF_LEVEL {
             Self::new_leaf(false)
         } else {
             let child = Self::new_empty_tree(level - 1);
@@ -193,7 +202,8 @@ impl Node {
 }
 
 impl Node {
-    pub fn get_bit(&self, x: i32, y: i32) -> u16 {
+    pub fn get_bit(&self, pos: impl Into<Position>) -> u16 {
+        let pos = pos.into();
         match *self {
             // independent of x and y
             Node::Leaf(c) => c as u16,
@@ -206,21 +216,21 @@ impl Node {
                 ref sw,
                 ref se,
             }) => {
-                // transform to relative coordinate space
                 // coordinates are not used at level 1, therefore the value doesn't matter. We default it to 0
-                let offset = if level >= 2 { 1 << (level - 2) } else { 0 };
-                //let offset = 2i32.checked_pow(level - 2).unwrap_or(0);
-                match (x < 0, y < 0) {
-                    (true, true) => nw.get_bit(x + offset, y + offset),
-                    (true, false) => sw.get_bit(x + offset, y - offset),
-                    (false, true) => ne.get_bit(x - offset, y + offset),
-                    (false, false) => se.get_bit(x - offset, y - offset),
+                //let offset = if level >= 2 { 1 << (level - 2) } else { 0 };
+
+                match pos.quadrant() {
+                    NorthWest => nw.get_bit(pos.relative_to(level.quadrant_center(NorthWest))),
+                    NorthEast => ne.get_bit(pos.relative_to(level.quadrant_center(NorthEast))),
+                    SouthWest => sw.get_bit(pos.relative_to(level.quadrant_center(SouthWest))),
+                    SouthEast => se.get_bit(pos.relative_to(level.quadrant_center(SouthEast))),
                 }
             }
         }
     }
 
-    pub fn set_bit(self, x: i32, y: i32, alive: bool) -> Self {
+    pub fn set_bit(self, pos: impl Into<Position>, alive: bool) -> Self {
+        let pos = pos.into();
         match self {
             // independent of x and y
             Node::Leaf(_) => Self::new_leaf(alive),
@@ -234,20 +244,34 @@ impl Node {
                 se,
             }) => {
                 // coordinates are not used at level 1, therefore the value doesn't matter. We default it to 0
-                let offset = if level >= 2 { 1 << (level - 2) } else { 0 };
-                match (x < 0, y < 0) {
-                    (true, true) => {
-                        Self::new_inner(nw.set_bit(x + offset, y + offset, alive), *ne, *sw, *se)
-                    }
-                    (true, false) => {
-                        Self::new_inner(*nw, *ne, sw.set_bit(x + offset, y - offset, alive), *se)
-                    }
-                    (false, true) => {
-                        Self::new_inner(*nw, ne.set_bit(x - offset, y + offset, alive), *sw, *se)
-                    }
-                    (false, false) => {
-                        Self::new_inner(*nw, *ne, *sw, se.set_bit(x - offset, y - offset, alive))
-                    }
+                //let offset = if level >= 2 { 1 << (level - 2) } else { 0 };
+
+                match pos.quadrant() {
+                    NorthWest => Self::new_inner(
+                        nw.set_bit(pos.relative_to(level.quadrant_center(NorthWest)), alive),
+                        *ne,
+                        *sw,
+                        *se,
+                    ),
+
+                    NorthEast => Self::new_inner(
+                        *nw,
+                        ne.set_bit(pos.relative_to(level.quadrant_center(NorthEast)), alive),
+                        *sw,
+                        *se,
+                    ),
+                    SouthWest => Self::new_inner(
+                        *nw,
+                        *ne,
+                        sw.set_bit(pos.relative_to(level.quadrant_center(SouthWest)), alive),
+                        *se,
+                    ),
+                    SouthEast => Self::new_inner(
+                        *nw,
+                        *ne,
+                        *sw,
+                        se.set_bit(pos.relative_to(level.quadrant_center(SouthEast)), alive),
+                    ),
                 }
             }
         }
@@ -307,7 +331,7 @@ impl Inode {
     }
 
     pub fn next_generation(mut self) -> Self {
-        debug_assert!(self.level >= 2, "must be level 2 or higher");
+        debug_assert!(self.level >= Level(2), "must be level 2 or higher");
 
         if let Some(result) = self.result {
             return *result;
@@ -379,7 +403,7 @@ impl Node {
         let mut all_bits: u16 = 0;
         for y in -2..2 {
             for x in -2..2 {
-                all_bits = (all_bits << 1) + self.get_bit(x, y);
+                all_bits = (all_bits << 1) + self.get_bit((x, y));
             }
         }
         Self::new_inner(

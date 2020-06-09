@@ -1,3 +1,5 @@
+//#![feature(type_alias_impl_trait)]
+
 #[allow(unused)]
 use color_eyre::{Help, Report, Result};
 #[allow(unused)]
@@ -9,9 +11,10 @@ pub use tracing::{
     warn_span,
 };
 
+mod core;
 mod logging;
+mod node;
 mod simulator;
-mod treelife;
 mod universe;
 
 use simulator::Simulator;

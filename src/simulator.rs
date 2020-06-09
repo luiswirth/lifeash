@@ -11,18 +11,17 @@ pub use tracing::{
 
 use std::io::prelude::*;
 
-use crate::treelife::tree_universe::TreeUniverse;
 use crate::universe::Universe;
 
 pub struct Simulator {
-    universe: Box<dyn Universe>,
+    universe: Universe,
 }
 
 impl Simulator {
     pub fn new() -> Simulator {
         //TODO: let user choose universe type
         Simulator {
-            universe: Box::new(TreeUniverse::new()),
+            universe: Universe::new(),
         }
     }
 
@@ -40,7 +39,7 @@ impl Simulator {
     pub fn render(&self) {
         for y in -8..8 {
             for x in -8..8 {
-                let alive = match self.universe.get_bit(x, y) {
+                let alive = match self.universe.get_bit((x, y)) {
                     0 => false,
                     1 => true,
                     _ => unreachable!(),
@@ -65,7 +64,7 @@ impl Simulator {
         let stdin = std::io::stdin();
         let mut handle = stdin.lock();
 
-        let (mut x, mut y) = (0, 0);
+        let (mut x, mut y) = (0i64, 0i64);
         let mut argument: u32 = 0;
 
         while handle.read_line(&mut line)? != 0 {
@@ -78,18 +77,18 @@ impl Simulator {
 
                 match c {
                     'b' => {
-                        x += parameter;
+                        x += parameter as i64;
                         argument = 0;
                     }
                     'o' => {
                         for _ in 0..parameter {
-                            self.universe.set_bit(x as i32, y as i32, true);
+                            self.universe.set_bit((x, y), true);
                             x += 1;
                         }
                         argument = 0
                     }
                     '$' => {
-                        y += parameter;
+                        y += parameter as i64;
                         x = 0;
                         argument = 0;
                     }
