@@ -11,17 +11,17 @@ use crate::core::{Level, Position, Quadrant::*};
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Node {
     // always level 0
-    Leaf(Cell),
+    Leaf(Leaf),
     // Node::Inner can never have level 0
-    Inner(Inode),
+    Inode(Inode),
 }
 
 #[derive(Debug, Clone)]
 pub struct Inode {
     level: Level,
     population: u32,
-    result: Option<Box<Inode>>,
-    pub nw: Box<Node>,
+    result: Option<Box<Inode>>, //remove
+    pub nw: Box<Node>,          // store IDs instead of actual Nodes
     pub ne: Box<Node>,
     pub sw: Box<Node>,
     pub se: Box<Node>,
@@ -46,26 +46,26 @@ impl Hash for Inode {
 // reduce to bit
 #[repr(u8)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum Cell {
+pub enum Leaf {
     Dead = 0u8,
     Alive = 1u8,
 }
 
-impl From<Cell> for Node {
-    fn from(cell: Cell) -> Self {
+impl From<Leaf> for Node {
+    fn from(cell: Leaf) -> Self {
         Node::Leaf(cell)
     }
 }
 
-impl From<Cell> for Box<Node> {
-    fn from(cell: Cell) -> Self {
+impl From<Leaf> for Box<Node> {
+    fn from(cell: Leaf) -> Self {
         Box::new(cell.into())
     }
 }
 
 impl From<Inode> for Node {
     fn from(inode: Inode) -> Self {
-        Node::Inner(inode)
+        Node::Inode(inode)
     }
 }
 
@@ -75,19 +75,19 @@ impl From<Inode> for Box<Node> {
     }
 }
 
-impl Cell {
+impl Leaf {
     fn new(alive: bool) -> Self {
         if alive {
-            Cell::Alive
+            Leaf::Alive
         } else {
-            Cell::Dead
+            Leaf::Dead
         }
     }
 
     pub fn alive(&self) -> bool {
         match *self {
-            Cell::Dead => false,
-            Cell::Alive => true,
+            Leaf::Dead => false,
+            Leaf::Alive => true,
         }
     }
 }
@@ -95,7 +95,7 @@ impl Cell {
 impl Inode {
     pub fn new(nw: Node, ne: Node, sw: Node, se: Node) -> Self {
         match (nw, ne, sw, se) {
-            (Node::Inner(nw), Node::Inner(ne), Node::Inner(sw), Node::Inner(se)) => {
+            (Node::Inode(nw), Node::Inode(ne), Node::Inode(sw), Node::Inode(se)) => {
                 debug_assert!(nw.level == ne.level && ne.level == sw.level && sw.level == se.level);
                 Inode {
                     level: nw.level + 1,
@@ -127,17 +127,17 @@ impl Inode {
 impl Node {
     #[inline(always)]
     pub fn new_leaf(alive: bool) -> Self {
-        Node::Leaf(Cell::new(alive))
+        Node::Leaf(Leaf::new(alive))
     }
 
     #[inline(always)]
     pub fn new_inner(nw: Node, ne: Node, sw: Node, se: Node) -> Self {
-        Node::Inner(Inode::new(nw, ne, sw, se))
+        Node::Inode(Inode::new(nw, ne, sw, se))
     }
 
     #[allow(unused)]
     #[inline(always)]
-    pub fn cell(self) -> Cell {
+    pub fn cell(self) -> Leaf {
         if let Node::Leaf(cell) = self {
             cell
         } else {
@@ -147,7 +147,7 @@ impl Node {
 
     #[allow(unused)]
     #[inline(always)]
-    pub fn cell_ref(&self) -> &Cell {
+    pub fn cell_ref(&self) -> &Leaf {
         if let Node::Leaf(ref cell) = self {
             cell
         } else {
@@ -157,7 +157,7 @@ impl Node {
 
     #[inline(always)]
     pub fn inode(self) -> Inode {
-        if let Node::Inner(inode) = self {
+        if let Node::Inode(inode) = self {
             inode
         } else {
             panic!("not an inner")
@@ -166,7 +166,7 @@ impl Node {
 
     #[inline(always)]
     pub fn inode_ref(&self) -> &Inode {
-        if let Node::Inner(ref inode) = self {
+        if let Node::Inode(ref inode) = self {
             inode
         } else {
             panic!("not an inner")
@@ -176,7 +176,7 @@ impl Node {
     #[inline(always)]
     pub fn population(&self) -> u32 {
         match *self {
-            Node::Inner(ref i) => i.population,
+            Node::Inode(ref i) => i.population,
             Node::Leaf(c) => c as u32,
         }
     }
@@ -184,7 +184,7 @@ impl Node {
     #[inline(always)]
     pub fn level(&self) -> Level {
         match *self {
-            Node::Inner(ref i) => i.level,
+            Node::Inode(ref i) => i.level,
             Node::Leaf(_) => Level::LEAF_LEVEL,
         }
     }
@@ -207,7 +207,7 @@ impl Node {
         match *self {
             // independent of x and y
             Node::Leaf(c) => c as u16,
-            Node::Inner(Inode {
+            Node::Inode(Inode {
                 level,
                 population: _,
                 result: _,
@@ -234,7 +234,7 @@ impl Node {
         match self {
             // independent of x and y
             Node::Leaf(_) => Self::new_leaf(alive),
-            Node::Inner(Inode {
+            Node::Inode(Inode {
                 level,
                 population: _,
                 result: _,

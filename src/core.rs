@@ -24,7 +24,7 @@ pub struct Offset {
     pub dy: i64,
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Level(pub u8);
 
 impl From<(i64, i64)> for Position {
