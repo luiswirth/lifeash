@@ -1,3 +1,4 @@
+#![feature(hash_set_entry)]
 //#![feature(type_alias_impl_trait)]
 
 #[allow(unused)]

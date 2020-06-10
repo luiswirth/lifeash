@@ -11,6 +11,7 @@ pub use tracing::{
 
 use std::io::prelude::*;
 
+use crate::node::Cell;
 use crate::universe::Universe;
 
 pub struct Simulator {
@@ -82,7 +83,7 @@ impl Simulator {
                     }
                     'o' => {
                         for _ in 0..parameter {
-                            self.universe.set_bit((x, y), true);
+                            self.universe.set_bit((x, y), Cell::Alive);
                             x += 1;
                         }
                         argument = 0
