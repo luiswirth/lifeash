@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use crate::{
-    core::{Level, Offset, Position, Quadrant::*},
+    core::{Level, Position, Quadrant::*},
     node::{Cell, Inode, Leaf, Node},
 };
 
@@ -12,7 +12,7 @@ pub struct Universe {
 }
 
 impl Universe {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             table: HashSet::new(),
             root: None,
@@ -20,13 +20,13 @@ impl Universe {
         }
     }
 
-    fn initalize(&mut self) {
+    pub fn initalize(&mut self) {
         self.root = Some(self.new_empty_tree(Level(3)));
     }
 }
 
 impl Universe {
-    pub fn get_cell(&self, tree: &Node, pos: impl Into<Position>) -> Cell {
+    pub fn get_tree_cell(&self, tree: &Node, pos: impl Into<Position>) -> Cell {
         let pos = pos.into();
         match *tree {
             Node::Leaf(c) => c.0,
@@ -39,16 +39,25 @@ impl Universe {
                 sw,
                 se,
             }) => match pos.quadrant() {
-                NorthWest => self.get_cell(nw, pos.relative_to(level.quadrant_center(NorthWest))),
-                NorthEast => self.get_cell(ne, pos.relative_to(level.quadrant_center(NorthEast))),
-                SouthWest => self.get_cell(sw, pos.relative_to(level.quadrant_center(SouthWest))),
-                SouthEast => self.get_cell(se, pos.relative_to(level.quadrant_center(SouthEast))),
+                NorthWest => {
+                    self.get_tree_cell(nw, pos.relative_to(level.quadrant_center(NorthWest)))
+                }
+                NorthEast => {
+                    self.get_tree_cell(ne, pos.relative_to(level.quadrant_center(NorthEast)))
+                }
+                SouthWest => {
+                    self.get_tree_cell(sw, pos.relative_to(level.quadrant_center(SouthWest)))
+                }
+                SouthEast => {
+                    self.get_tree_cell(se, pos.relative_to(level.quadrant_center(SouthEast)))
+                }
             },
         }
     }
 
-    pub fn set_cell(&mut self, tree: &Node, pos: impl Into<Position>, state: Cell) -> &Node {
+    fn set_tree_cell(&mut self, tree: &Node, pos: impl Into<Position>, state: Cell) -> &Node {
         let pos = pos.into();
+
         match *tree {
             Node::Leaf(_) => self.new_leaf(state),
             Node::Inode(Inode {
@@ -133,13 +142,12 @@ impl Universe {
     }
 
     pub fn new_empty_tree(&mut self, level: Level) -> &Node {
-        let node = if level == Level::LEAF_LEVEL {
+        if level == Level::LEAF_LEVEL {
             self.new_leaf(Cell::Dead)
         } else {
             let child = Self::new_empty_tree(self, level - 1);
             self.new_inode(child, child, child, child)
-        };
-        self.table.get_or_insert(node)
+        }
     }
 }
 
@@ -158,7 +166,7 @@ impl Universe {
     // since recursive make second function which always calls on root
     pub fn evolve_tree(&mut self, tree: &Node) -> &Node {
         let inode = tree.inode_ref();
-        debug_assert!(tree.level >= Level(2), "must be level 2 or higher");
+        debug_assert!(inode.level >= Level(2), "must be level 2 or higher");
 
         if let Some(result) = inode.result {
             return result;
@@ -234,7 +242,7 @@ impl Universe {
         let mut all_bits: u16 = 0;
         for y in -2..2 {
             for x in -2..2 {
-                all_bits = (all_bits << 1) + self.get_cell(self.root.unwrap(), (x, y)) as u16;
+                all_bits = (all_bits << 1) + self.get_tree_cell(self.root.unwrap(), (x, y)) as u16;
             }
         }
         self.new_inode(
@@ -312,31 +320,34 @@ impl Universe {
     }
 }
 
-/*
+// old universe interface
+// TODO: refactor (maybe make this a store module and put this in a "new" universe module)
 
-old universe module stuff:
-
-
-    pub fn set_bit(&mut self, pos: impl Into<Position>, cell: Cell) {
+impl Universe {
+    pub fn set_cell(&mut self, pos: impl Into<Position>, cell: Cell) {
         let pos = pos.into();
-        // TODO: remove copy?
-        let mut copy = self.root.clone();
+        let root = self.root.unwrap();
+
         loop {
-            // check coordiante bounds
-            if pos.in_bounds(copy.level()) {
+            if pos.in_bounds(root.level()) {
                 break;
             }
-            copy = copy.expand_universe();
+            self.expand();
         }
 
-        self.root = copy.set_bit(pos, cell);
+        self.root = Some(self.set_tree_cell(root, pos, cell));
     }
 
-    pub fn run_step(&mut self) {
-        while self.root.level() < 3
-            || self.root.inode_ref().nw.population()
-                != self
-                    .root
+    pub fn get_cell(&mut self, pos: impl Into<Position>) -> Cell {
+        let root = self.root.unwrap();
+        self.get_tree_cell(root, pos)
+    }
+
+    pub fn evolve(&mut self) {
+        let root = self.root.unwrap();
+        while root.level() < 3
+            || root.inode_ref().nw.population()
+                != root
                     .inode_ref()
                     .nw
                     .inode_ref()
@@ -344,9 +355,8 @@ old universe module stuff:
                     .inode_ref()
                     .se
                     .population()
-            || self.root.inode_ref().ne.population()
-                != self
-                    .root
+            || root.inode_ref().ne.population()
+                != root
                     .inode_ref()
                     .ne
                     .inode_ref()
@@ -354,9 +364,8 @@ old universe module stuff:
                     .inode_ref()
                     .sw
                     .population()
-            || self.root.inode_ref().sw.population()
-                != self
-                    .root
+            || root.inode_ref().sw.population()
+                != root
                     .inode_ref()
                     .sw
                     .inode_ref()
@@ -364,9 +373,8 @@ old universe module stuff:
                     .inode_ref()
                     .ne
                     .population()
-            || self.root.inode_ref().se.population()
-                != self
-                    .root
+            || root.inode_ref().se.population()
+                != root
                     .inode_ref()
                     .se
                     .inode_ref()
@@ -375,12 +383,11 @@ old universe module stuff:
                     .nw
                     .population()
         {
-            self.root = self.root.clone().expand_universe();
+            self.expand()
         }
+        let root = self.root.unwrap();
 
-        self.root = self.root.clone().inode().evolve().into();
+        self.root = Some(self.evolve_tree(root));
         self.generation += 1;
     }
-
-
-*/
+}

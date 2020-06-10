@@ -6,7 +6,7 @@ pub use tracing::{
 
 use std::hash::{Hash, Hasher};
 
-use crate::core::{Level, Position, Quadrant::*};
+use crate::core::Level;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Node {
@@ -20,11 +20,11 @@ pub enum Node {
 pub struct Inode {
     pub level: Level,
     pub population: u32,
-    pub result: Option<&Inode>,
-    pub nw: &Node,
-    pub ne: &Node,
-    pub sw: &Node,
-    pub se: &Node,
+    pub result: Option<&'static Node>,
+    pub nw: &'static Node,
+    pub ne: &'static Node,
+    pub sw: &'static Node,
+    pub se: &'static Node,
 }
 
 #[repr(u8)]

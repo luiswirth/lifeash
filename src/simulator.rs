@@ -20,10 +20,10 @@ pub struct Simulator {
 
 impl Simulator {
     pub fn new() -> Simulator {
-        //TODO: let user choose universe type
-        Simulator {
-            universe: Universe::new(),
-        }
+        let universe = Universe::new();
+        universe.initalize();
+
+        Simulator { universe }
     }
 
     pub fn run(&mut self) {
@@ -34,16 +34,15 @@ impl Simulator {
     }
 
     fn update(&mut self) {
-        self.universe.run_step();
+        self.universe.evolve();
     }
 
     pub fn render(&self) {
         for y in -8..8 {
             for x in -8..8 {
-                let alive = match self.universe.get_bit((x, y)) {
-                    0 => false,
-                    1 => true,
-                    _ => unreachable!(),
+                let alive = match self.universe.get_cell((x, y)) {
+                    Cell::Dead => false,
+                    Cell::Alive => true,
                 };
                 if alive {
                     print!("o");
@@ -83,7 +82,7 @@ impl Simulator {
                     }
                     'o' => {
                         for _ in 0..parameter {
-                            self.universe.set_bit((x, y), Cell::Alive);
+                            self.universe.set_cell((x, y), Cell::Alive);
                             x += 1;
                         }
                         argument = 0
