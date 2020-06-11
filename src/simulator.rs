@@ -20,7 +20,7 @@ pub struct Simulator {
 
 impl Simulator {
     pub fn new() -> Simulator {
-        let universe = Universe::new();
+        let mut universe = Universe::new();
         universe.initalize();
 
         Simulator { universe }

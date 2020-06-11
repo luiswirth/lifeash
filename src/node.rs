@@ -7,6 +7,7 @@ pub use tracing::{
 use std::hash::{Hash, Hasher};
 
 use crate::core::Level;
+use crate::universe::Id;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Node {
@@ -20,11 +21,11 @@ pub enum Node {
 pub struct Inode {
     pub level: Level,
     pub population: u32,
-    pub result: Option<&'static Node>,
-    pub nw: &'static Node,
-    pub ne: &'static Node,
-    pub sw: &'static Node,
-    pub se: &'static Node,
+    pub result: Option<Id>,
+    pub nw: Id,
+    pub ne: Id,
+    pub sw: Id,
+    pub se: Id,
 }
 
 #[repr(u8)]
@@ -79,42 +80,6 @@ impl Leaf {
 }
 
 impl Node {
-    #[inline(always)]
-    pub fn leaf(self) -> Leaf {
-        if let Node::Leaf(cell) = self {
-            cell
-        } else {
-            panic!("not a leaf")
-        }
-    }
-
-    #[inline(always)]
-    pub fn leaf_ref(&self) -> &Leaf {
-        if let Node::Leaf(ref cell) = self {
-            cell
-        } else {
-            panic!("not a leaf")
-        }
-    }
-
-    #[inline(always)]
-    pub fn inode(self) -> Inode {
-        if let Node::Inode(inode) = self {
-            inode
-        } else {
-            panic!("not an inner")
-        }
-    }
-
-    #[inline(always)]
-    pub fn inode_ref(&self) -> &Inode {
-        if let Node::Inode(ref inode) = self {
-            inode
-        } else {
-            panic!("not an inner")
-        }
-    }
-
     #[inline(always)]
     pub fn population(&self) -> u32 {
         match *self {
