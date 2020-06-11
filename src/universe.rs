@@ -66,10 +66,6 @@ impl Universe {
         }
     }
 
-    // creation methods return references into hashset
-    // other methods consume references and return new references into hashset
-
-    // TODO: maybe return Leaf and Inode instead of Node
     pub fn new_leaf(&mut self, cell: Cell) -> Id {
         let node = Node::Leaf(Leaf(cell));
         self.get_id(node)
@@ -167,47 +163,38 @@ impl Universe {
                 sw,
                 se,
             }) => match pos.quadrant() {
-                NorthWest => self.new_inode(
-                    self.set_tree_cell(
+                NorthWest => {
+                    let nw = self.set_tree_cell(
                         nw,
                         pos.relative_to(level.quadrant_center(NorthWest)),
                         state,
-                    ),
-                    ne,
-                    sw,
-                    se,
-                ),
-
-                NorthEast => self.new_inode(
-                    nw,
-                    self.set_tree_cell(
+                    );
+                    self.new_inode(nw, ne, sw, se)
+                }
+                NorthEast => {
+                    let ne = self.set_tree_cell(
                         ne,
                         pos.relative_to(level.quadrant_center(NorthEast)),
                         state,
-                    ),
-                    sw,
-                    se,
-                ),
-                SouthWest => self.new_inode(
-                    nw,
-                    ne,
-                    self.set_tree_cell(
+                    );
+                    self.new_inode(nw, ne, sw, se)
+                }
+                SouthWest => {
+                    let sw = self.set_tree_cell(
                         sw,
                         pos.relative_to(level.quadrant_center(SouthWest)),
                         state,
-                    ),
-                    se,
-                ),
-                SouthEast => self.new_inode(
-                    nw,
-                    ne,
-                    sw,
-                    self.set_tree_cell(
+                    );
+                    self.new_inode(nw, ne, sw, se)
+                }
+                SouthEast => {
+                    let se = self.set_tree_cell(
                         se,
                         pos.relative_to(level.quadrant_center(SouthEast)),
                         state,
-                    ),
-                ),
+                    );
+                    self.new_inode(nw, ne, sw, se)
+                }
             },
         }
     }
@@ -215,46 +202,69 @@ impl Universe {
 
 impl Universe {
     pub fn expand(&mut self) {
-        let root = self.root.unwrap().inode(self);
-        let border = self.new_empty_tree(root.level - 1);
-        self.root = Some(self.new_inode(
-            self.new_inode(border, border, border, root.nw),
-            self.new_inode(border, border, root.ne, border),
-            self.new_inode(border, root.sw, border, border),
-            self.new_inode(root.se, border, border, border),
-        ));
+        let level = self.root.unwrap().inode(self).level;
+        let border = self.new_empty_tree(level - 1);
+        let (root_nw, root_ne, root_sw, root_se) = {
+            let root = self.root.unwrap().inode(self);
+            (root.nw, root.ne, root.sw, root.se)
+        };
+        let (nw, ne, sw, se) = (
+            self.new_inode(border, border, border, root_nw),
+            self.new_inode(border, border, root_ne, border),
+            self.new_inode(border, root_sw, border, border),
+            self.new_inode(root_se, border, border, border),
+        );
+        self.root = Some(self.new_inode(nw, ne, sw, se));
     }
 
     // since recursive make second function which always calls on root
     pub fn evolve_tree(&mut self, tree: Id) -> Id {
-        let inode = tree.inode(self);
-        debug_assert!(inode.level >= Level(2), "must be level 2 or higher");
+        {
+            let inode = tree.inode(self);
+            debug_assert!(inode.level >= Level(2), "must be level 2 or higher");
+        }
 
-        if let Some(result) = inode.result {
+        if let Some(result) = tree.inode(self).result {
             return result;
         }
 
-        if inode.level == 2 {
+        if tree.inode(self).level == 2 {
             self.manual_evolve(tree)
         } else {
-            let n00 = self.centered_sub(inode.nw);
-            let n01 = self.centered_horizontal(inode.nw, inode.ne);
-            let n02 = self.centered_sub(inode.ne);
-            let n10 = self.centered_vertical(inode.nw, inode.sw);
+            let (tree_nw, tree_ne, tree_sw, tree_se) = {
+                let inode = tree.inode(self);
+                (inode.nw, inode.ne, inode.sw, inode.se)
+            };
+            let n00 = self.centered_sub(tree_nw);
+            let n01 = self.centered_horizontal(tree_nw, tree_ne);
+            let n02 = self.centered_sub(tree_ne);
+            let n10 = self.centered_vertical(tree_nw, tree_sw);
             let n11 = self.centered_subsub(tree);
-            let n12 = self.centered_vertical(inode.ne, inode.se);
-            let n20 = self.centered_sub(inode.sw);
-            let n21 = self.centered_horizontal(inode.sw, inode.se);
-            let n22 = self.centered_sub(inode.se);
+            let n12 = self.centered_vertical(tree_ne, tree_se);
+            let n20 = self.centered_sub(tree_sw);
+            let n21 = self.centered_horizontal(tree_sw, tree_se);
+            let n22 = self.centered_sub(tree_se);
 
-            inode.result = Some(self.new_inode(
-                self.evolve_tree(self.new_inode(n00, n01, n10, n11)),
-                self.evolve_tree(self.new_inode(n01, n02, n11, n12)),
-                self.evolve_tree(self.new_inode(n10, n11, n20, n21)),
-                self.evolve_tree(self.new_inode(n11, n12, n21, n22)),
-            ));
+            let (nw, ne, sw, se) = {
+                let nw = self.new_inode(n00, n01, n10, n11);
+                let ne = self.new_inode(n01, n02, n11, n12);
+                let sw = self.new_inode(n10, n11, n20, n21);
+                let se = self.new_inode(n11, n12, n21, n22);
+                (
+                    self.evolve_tree(nw),
+                    self.evolve_tree(ne),
+                    self.evolve_tree(sw),
+                    self.evolve_tree(se),
+                )
+            };
+            let result = self.new_inode(nw, ne, sw, se);
 
-            inode.result.unwrap()
+            // TODO have mutable way of changing this
+            if let Node::Inode(inode) = self.table.get_mut(&tree).unwrap() {
+                inode.result = Some(result);
+            }
+
+            result
         }
     }
 
@@ -281,12 +291,14 @@ impl Universe {
                 all_bits = (all_bits << 1) + self.get_tree_cell(self.root.unwrap(), (x, y)) as u16;
             }
         }
-        self.new_inode(
-            self.one_gen(all_bits >> 5), // nw
-            self.one_gen(all_bits >> 4), // ne
-            self.one_gen(all_bits >> 1), // sw
-            self.one_gen(all_bits),      // se
-        )
+        let (nw, ne, sw, se) = (
+            self.one_gen(all_bits >> 5),
+            self.one_gen(all_bits >> 4),
+            self.one_gen(all_bits >> 1),
+            self.one_gen(all_bits),
+        );
+
+        self.new_inode(nw, ne, sw, se)
     }
 
     // to update a cell be have to look at 9 cells (itself and the 8 directly adjecent ones)
@@ -319,44 +331,49 @@ impl Universe {
         let (west, east) = (west.inode(self), east.inode(self));
         debug_assert!(west.level == east.level, "levels must be the same");
 
-        self.new_inode(
+        let (nw, ne, sw, se) = (
             west.ne.inode(self).se,
             east.nw.inode(self).sw,
             west.se.inode(self).ne,
             east.sw.inode(self).nw,
-        )
+        );
+        self.new_inode(nw, ne, sw, se)
     }
 
     pub fn centered_vertical(&mut self, north: Id, south: Id) -> Id {
         let (north, south) = (north.inode(self), south.inode(self));
         debug_assert!(north.level == south.level, "levels must be the same");
 
-        self.new_inode(
+        let (nw, ne, sw, se) = (
             north.sw.inode(self).se,
             north.se.inode(self).sw,
             south.nw.inode(self).ne,
             south.ne.inode(self).nw,
-        )
+        );
+        self.new_inode(nw, ne, sw, se)
     }
 
     pub fn centered_sub(&mut self, node: Id) -> Id {
         let node = node.inode(self);
-        self.new_inode(
+
+        let (nw, ne, sw, se) = (
             node.nw.inode(self).se,
             node.ne.inode(self).sw,
             node.sw.inode(self).ne,
             node.se.inode(self).nw,
-        )
+        );
+        self.new_inode(nw, ne, sw, se)
     }
 
     pub fn centered_subsub(&mut self, node: Id) -> Id {
         let node = node.inode(self);
-        self.new_inode(
+        let (nw, ne, sw, se) = (
             node.nw.inode(self).se.inode(self).se,
             node.ne.inode(self).sw.inode(self).sw,
             node.sw.inode(self).ne.inode(self).ne,
             node.se.inode(self).nw.inode(self).nw,
-        )
+        );
+        self.new_inode(nw, ne, sw, se)
     }
 }
 
@@ -366,10 +383,10 @@ impl Universe {
 impl Universe {
     pub fn set_cell(&mut self, pos: impl Into<Position>, cell: Cell) {
         let pos = pos.into();
-        let root = self.root.unwrap().node(self);
 
         loop {
-            if pos.in_bounds(root.level()) {
+            let level = self.root.unwrap().node(self).level();
+            if pos.in_bounds(level) {
                 break;
             }
             self.expand();
@@ -384,45 +401,55 @@ impl Universe {
     }
 
     pub fn evolve(&mut self) {
-        let root = self.root.unwrap().node(self);
         let iroot = self.root.unwrap().inode(self);
-        while root.level() < 3
-            || iroot.nw.node(self).population()
-                != iroot
-                    .nw
-                    .inode(self)
-                    .se
-                    .inode(self)
-                    .se
-                    .node(self)
-                    .population()
-            || iroot.ne.node(self).population()
-                != iroot
-                    .ne
-                    .inode(self)
-                    .sw
-                    .inode(self)
-                    .sw
-                    .node(self)
-                    .population()
-            || iroot.sw.node(self).population()
-                != iroot
-                    .sw
-                    .inode(self)
-                    .ne
-                    .inode(self)
-                    .ne
-                    .node(self)
-                    .population()
-            || iroot.se.node(self).population()
-                != iroot
-                    .se
-                    .inode(self)
-                    .nw
-                    .inode(self)
-                    .nw
-                    .node(self)
-                    .population()
+        let (nw_pop, ne_pop, sw_pop, se_pop) = (
+            iroot.nw.node(self).population(),
+            iroot.ne.node(self).population(),
+            iroot.sw.node(self).population(),
+            iroot.se.node(self).population(),
+        );
+
+        // TODO: understand meaning and give better name
+        let (nw_inner_pop, ne_inner_pop, sw_inner_pop, se_inner_pop) = (
+            iroot
+                .nw
+                .inode(self)
+                .se
+                .inode(self)
+                .se
+                .node(self)
+                .population(),
+            iroot
+                .ne
+                .inode(self)
+                .sw
+                .inode(self)
+                .sw
+                .node(self)
+                .population(),
+            iroot
+                .sw
+                .inode(self)
+                .ne
+                .inode(self)
+                .ne
+                .node(self)
+                .population(),
+            iroot
+                .se
+                .inode(self)
+                .nw
+                .inode(self)
+                .nw
+                .node(self)
+                .population(),
+        );
+
+        while self.root.unwrap().node(self).level() < 3
+            || nw_pop != nw_inner_pop
+            || ne_pop != ne_inner_pop
+            || sw_pop != sw_inner_pop
+            || se_pop != se_inner_pop
         {
             self.expand()
         }
