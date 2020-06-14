@@ -401,58 +401,61 @@ impl Universe {
     }
 
     pub fn evolve(&mut self) {
-        let iroot = self.root.unwrap().inode(self);
-        let (nw_pop, ne_pop, sw_pop, se_pop) = (
-            iroot.nw.node(self).population(),
-            iroot.ne.node(self).population(),
-            iroot.sw.node(self).population(),
-            iroot.se.node(self).population(),
-        );
+        loop {
+            let iroot = self.root.unwrap().inode(self);
+            let (nw_pop, ne_pop, sw_pop, se_pop) = (
+                iroot.nw.node(self).population(),
+                iroot.ne.node(self).population(),
+                iroot.sw.node(self).population(),
+                iroot.se.node(self).population(),
+            );
 
-        // TODO: understand meaning and give better name
-        let (nw_inner_pop, ne_inner_pop, sw_inner_pop, se_inner_pop) = (
-            iroot
-                .nw
-                .inode(self)
-                .se
-                .inode(self)
-                .se
-                .node(self)
-                .population(),
-            iroot
-                .ne
-                .inode(self)
-                .sw
-                .inode(self)
-                .sw
-                .node(self)
-                .population(),
-            iroot
-                .sw
-                .inode(self)
-                .ne
-                .inode(self)
-                .ne
-                .node(self)
-                .population(),
-            iroot
-                .se
-                .inode(self)
-                .nw
-                .inode(self)
-                .nw
-                .node(self)
-                .population(),
-        );
+            let (nw_inner_pop, ne_inner_pop, sw_inner_pop, se_inner_pop) = (
+                iroot
+                    .nw
+                    .inode(self)
+                    .se
+                    .inode(self)
+                    .se
+                    .node(self)
+                    .population(),
+                iroot
+                    .ne
+                    .inode(self)
+                    .sw
+                    .inode(self)
+                    .sw
+                    .node(self)
+                    .population(),
+                iroot
+                    .sw
+                    .inode(self)
+                    .ne
+                    .inode(self)
+                    .ne
+                    .node(self)
+                    .population(),
+                iroot
+                    .se
+                    .inode(self)
+                    .nw
+                    .inode(self)
+                    .nw
+                    .node(self)
+                    .population(),
+            );
 
-        while self.root.unwrap().node(self).level() < 3
-            || nw_pop != nw_inner_pop
-            || ne_pop != ne_inner_pop
-            || sw_pop != sw_inner_pop
-            || se_pop != se_inner_pop
-        {
-            self.expand()
+            if self.root.unwrap().node(self).level() >= 3
+                && nw_pop == nw_inner_pop
+                && ne_pop == ne_inner_pop
+                && sw_pop == sw_inner_pop
+                && se_pop == se_inner_pop
+            {
+                break;
+            }
+            self.expand();
         }
+
         let root = self.root.unwrap();
 
         self.root = Some(self.evolve_tree(root));
