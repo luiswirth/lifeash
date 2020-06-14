@@ -58,15 +58,11 @@ impl Simulator {
         std::io::stdin().read_line(&mut string).unwrap();
     }
 
-    pub fn read_pattern(&mut self) -> Result<()> {
-        let mut line = String::new();
-        let stdin = std::io::stdin();
-        let mut handle = stdin.lock();
-
+    pub fn read_rls(&mut self, pattern: &str) {
         let (mut x, mut y) = (0i64, 0i64);
         let mut argument: u32 = 0;
 
-        while handle.read_line(&mut line)? != 0 {
+        for line in pattern.lines() {
             if line.starts_with('x') || line.starts_with('#') {
                 continue;
             }
@@ -91,7 +87,7 @@ impl Simulator {
                         x = 0;
                         argument = 0;
                     }
-                    '!' => return Ok(()),
+                    '!' => return,
                     _ if c.is_digit(10) => {
                         argument = 10 * argument + c.to_digit(10).unwrap();
                     }
@@ -99,6 +95,23 @@ impl Simulator {
                 }
             }
         }
+    }
+
+    fn read_rls_from_stdin(&mut self) -> Result<()> {
+        let mut string = String::new();
+
+        let stdin = std::io::stdin();
+        let mut handle = stdin.lock();
+        let mut line = String::new();
+
+        while handle.read_line(&mut line)? != 0 {
+            string.push_str(&line);
+            if line.contains('!') {
+                break;
+            }
+        }
+
+        self.read_rls(&string);
 
         Ok(())
     }

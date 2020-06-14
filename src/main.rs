@@ -19,14 +19,15 @@ mod universe;
 
 use simulator::Simulator;
 
+const BI_BLOCK_PATTERN: &str = "oo$oo!";
+
 fn main() -> Result<()> {
     logging::setup();
 
     info!("starting simulator");
     let mut simulator = Simulator::new();
-    info!("reading pattern");
-    simulator.read_pattern()?;
-    info!("finished reading pattern");
+
+    simulator.read_rls(BI_BLOCK_PATTERN);
 
     info!("start simulation loop");
     simulator.run();
