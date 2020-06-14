@@ -4,7 +4,19 @@ version = "0.1.0"
 authors = ["Luis Wirth <lwirth2000@gmail.com>"]
 edition = "2018"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+description = "A Hashlife (Gosper's algorithm) implementation written in Rust"
+readme = "README.md"
+
+homepage = "https://github.com/LU15W1R7H/hasherlife"
+repository = "https://github.com/LU15W1R7H/hasherlife.git"
+
+#documentation = "docs.rs link"
+keywords = ["hashlife", "cellular-automata", "hashing", "memoization" ]
+categories = [ "simulation" ]
+license = "MIT"
+
+#[badges]
+
 
 [profile.release]
 debug = true
