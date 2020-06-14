@@ -6,8 +6,7 @@ pub use tracing::{
 
 use std::hash::{Hash, Hasher};
 
-use crate::core::Level;
-use crate::universe::Id;
+use crate::{core::Level, universe::Id};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Node {

@@ -1,6 +1,8 @@
-use std::cmp::Ordering;
-use std::convert::TryFrom;
-use std::ops::{Add, AddAssign, Sub, SubAssign};
+use std::{
+    cmp::Ordering,
+    convert::TryFrom,
+    ops::{Add, AddAssign, Sub, SubAssign},
+};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Position {
