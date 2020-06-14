@@ -11,7 +11,7 @@ pub use tracing::{
 
 use std::io::prelude::*;
 
-use crate::universe::Universe;
+use crate::{node::Cell, universe::Universe};
 
 pub struct Simulator {
     universe: Universe,
@@ -19,10 +19,10 @@ pub struct Simulator {
 
 impl Simulator {
     pub fn new() -> Simulator {
-        //TODO: let user choose universe type
-        Simulator {
-            universe: Universe::new(),
-        }
+        let mut universe = Universe::new();
+        universe.initalize();
+
+        Simulator { universe }
     }
 
     pub fn run(&mut self) {
@@ -33,16 +33,15 @@ impl Simulator {
     }
 
     fn update(&mut self) {
-        self.universe.run_step();
+        self.universe.evolve();
     }
 
     pub fn render(&self) {
         for y in -8..8 {
             for x in -8..8 {
-                let alive = match self.universe.get_bit((x, y)) {
-                    0 => false,
-                    1 => true,
-                    _ => unreachable!(),
+                let alive = match self.universe.get_cell((x, y)) {
+                    Cell::Dead => false,
+                    Cell::Alive => true,
                 };
                 if alive {
                     print!("o");
@@ -59,15 +58,11 @@ impl Simulator {
         std::io::stdin().read_line(&mut string).unwrap();
     }
 
-    pub fn read_pattern(&mut self) -> Result<()> {
-        let mut line = String::new();
-        let stdin = std::io::stdin();
-        let mut handle = stdin.lock();
-
+    pub fn read_rls(&mut self, pattern: &str) {
         let (mut x, mut y) = (0i64, 0i64);
         let mut argument: u32 = 0;
 
-        while handle.read_line(&mut line)? != 0 {
+        for line in pattern.lines() {
             if line.starts_with('x') || line.starts_with('#') {
                 continue;
             }
@@ -82,7 +77,7 @@ impl Simulator {
                     }
                     'o' => {
                         for _ in 0..parameter {
-                            self.universe.set_bit((x, y), true);
+                            self.universe.set_cell((x, y), Cell::Alive);
                             x += 1;
                         }
                         argument = 0
@@ -92,7 +87,7 @@ impl Simulator {
                         x = 0;
                         argument = 0;
                     }
-                    '!' => return Ok(()),
+                    '!' => return,
                     _ if c.is_digit(10) => {
                         argument = 10 * argument + c.to_digit(10).unwrap();
                     }
@@ -100,6 +95,23 @@ impl Simulator {
                 }
             }
         }
+    }
+
+    fn read_rls_from_stdin(&mut self) -> Result<()> {
+        let mut string = String::new();
+
+        let stdin = std::io::stdin();
+        let mut handle = stdin.lock();
+        let mut line = String::new();
+
+        while handle.read_line(&mut line)? != 0 {
+            string.push_str(&line);
+            if line.contains('!') {
+                break;
+            }
+        }
+
+        self.read_rls(&string);
 
         Ok(())
     }
