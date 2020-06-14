@@ -17,11 +17,13 @@ license = "MIT"
 
 #[badges]
 
-
+# for cargo flamegraph
 [profile.release]
 debug = true
 
 [dependencies]
+sdl2 = "0.34.1"
+
 eyre = "0.4.3"
 color-eyre = { version = "0.3.4", features = [ "capture-spantrace"] }
 tracing = "0.1.15"

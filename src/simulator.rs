@@ -13,8 +13,23 @@ use std::io::prelude::*;
 
 use crate::{node::Cell, universe::Universe};
 
+use sdl2::{
+    event::Event,
+    keyboard::Keycode,
+    pixels::Color,
+    rect::{Point, Rect},
+    render::Canvas,
+    video::Window,
+    EventPump,
+};
+
+const CELL_SIZE: u32 = 10;
+const CELL_PADDING: u32 = 2;
+
 pub struct Simulator {
     universe: Universe,
+    canvas: Canvas<Window>,
+    event_pump: EventPump,
 }
 
 impl Simulator {
@@ -22,7 +37,24 @@ impl Simulator {
         let mut universe = Universe::new();
         universe.initalize();
 
-        Simulator { universe }
+        // init sdl
+        let sdl_context = sdl2::init().unwrap();
+        let video_subsystem = sdl_context.video().unwrap();
+
+        let window = video_subsystem
+            .window(env!("CARGO_PKG_NAME"), 1600, 1200)
+            .position_centered()
+            .build()
+            .unwrap();
+
+        let canvas = window.into_canvas().build().unwrap();
+        let event_pump = sdl_context.event_pump().unwrap();
+
+        Simulator {
+            universe,
+            canvas,
+            event_pump,
+        }
     }
 
     pub fn run(&mut self) {
@@ -33,29 +65,61 @@ impl Simulator {
     }
 
     fn update(&mut self) {
+        for event in self.event_pump.poll_iter() {
+            match event {
+                Event::Quit { .. }
+                | Event::KeyDown {
+                    keycode: Some(Keycode::Escape),
+                    ..
+                }
+                | Event::KeyDown {
+                    keycode: Some(Keycode::Q),
+                    ..
+                } => std::process::exit(0),
+                _ => {}
+            }
+        }
+
         self.universe.evolve();
     }
 
-    pub fn render(&self) {
-        for y in -8..8 {
-            for x in -8..8 {
-                let alive = match self.universe.get_cell((x, y)) {
+    pub fn render(&mut self) {
+        let canvas = &mut self.canvas;
+
+        canvas.set_draw_color(Color::BLACK);
+        canvas.clear();
+        canvas.set_draw_color(Color::WHITE);
+
+        let center = {
+            let size = canvas.viewport();
+            Point::new(size.width() as i32 / 2, size.height() as i32 / 2)
+        };
+
+        let x_range = center.x() / CELL_SIZE as i32;
+        let y_range = center.y() / CELL_SIZE as i32;
+
+        for y in -y_range..y_range {
+            for x in -x_range..x_range {
+                let alive = match self.universe.get_cell((x as i64, y as i64)) {
                     Cell::Dead => false,
                     Cell::Alive => true,
                 };
+
                 if alive {
-                    print!("o");
-                } else {
-                    print!(" ");
+                    let center = center
+                        + Point::new(
+                            x as i32 * (CELL_SIZE + CELL_PADDING) as i32,
+                            y as i32 * (CELL_SIZE + CELL_PADDING) as i32,
+                        );
+                    let rect = Rect::from_center(center, CELL_SIZE, CELL_SIZE);
+
+                    canvas.fill_rect(rect).unwrap();
                 }
             }
-            println!();
         }
-        println!();
 
-        //std::thread::sleep(std::time::Duration::from_millis(1000));
-        let mut string = String::new();
-        std::io::stdin().read_line(&mut string).unwrap();
+        canvas.present();
+        //std::thread::sleep(std::time::Duration::from_millis(10));
     }
 
     pub fn read_rls(&mut self, pattern: &str) {
