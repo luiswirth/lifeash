@@ -36,6 +36,7 @@ impl From<(i64, i64)> for Position {
 }
 
 impl Position {
+    #[allow(dead_code)]
     pub const ORIGIN: Self = Self::new(0, 0);
 
     pub const fn new(x: i64, y: i64) -> Self {
@@ -101,7 +102,9 @@ impl Add for Level {
     type Output = Self;
 
     fn add(self, other: Self) -> Self {
-        Level(self.0 + other.0)
+        let l = Level(self.0 + other.0);
+        l.check_validity();
+        l
     }
 }
 
@@ -109,19 +112,23 @@ impl Add<u8> for Level {
     type Output = Self;
 
     fn add(self, n: u8) -> Self {
-        Level(self.0 + n)
+        let l = Level(self.0 + n);
+        l.check_validity();
+        l
     }
 }
 
 impl AddAssign for Level {
     fn add_assign(&mut self, other: Self) {
         self.0 += other.0;
+        self.check_validity();
     }
 }
 
 impl AddAssign<u8> for Level {
     fn add_assign(&mut self, n: u8) {
         self.0 += n;
+        self.check_validity();
     }
 }
 
@@ -183,13 +190,21 @@ impl Level {
         self.min_coord()..self.max_coord()
     }
 
+    #[allow(dead_code)]
     pub fn min_pos(self) -> Position {
         let min = Self::min_coord(self);
         (min, min).into()
     }
 
+    #[allow(dead_code)]
     pub fn max_pos(self) -> Position {
         let max = Self::max_coord(self);
         (max, max).into()
+    }
+
+    fn check_validity(self) {
+        if self > Self::MAX_LEVEL {
+            panic!("the maximal level ({}) was exceeded", Self::MAX_LEVEL.0);
+        }
     }
 }

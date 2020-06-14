@@ -34,6 +34,3 @@ fn main() -> Result<()> {
 
     Ok(())
 }
-
-// interesting patterns:
-// Octagon 2: bobbob$oboobo$bobbob$bobbob$oboobo$bobbob!

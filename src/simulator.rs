@@ -97,7 +97,8 @@ impl Simulator {
         }
     }
 
-    fn read_rls_from_stdin(&mut self) -> Result<()> {
+    #[allow(dead_code)]
+    pub fn read_rls_from_stdin(&mut self) -> Result<()> {
         let mut string = String::new();
 
         let stdin = std::io::stdin();

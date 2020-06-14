@@ -19,6 +19,7 @@ impl Id {
         univ.table.get(&self).unwrap()
     }
 
+    #[allow(dead_code)]
     fn leaf(self, univ: &Universe) -> &Leaf {
         if let Node::Leaf(leaf) = self.node(univ) {
             leaf

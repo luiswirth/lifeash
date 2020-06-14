@@ -66,10 +66,12 @@ impl From<Inode> for Node {
 }
 
 impl Leaf {
+    #[allow(dead_code)]
     pub fn new(cell: Cell) -> Self {
         Self(cell)
     }
 
+    #[allow(dead_code)]
     pub fn alive(&self) -> bool {
         match self.0 {
             Cell::Dead => false,
