@@ -288,7 +288,7 @@ impl Universe {
         let mut all_bits: u16 = 0;
         for y in -2..2 {
             for x in -2..2 {
-                all_bits = (all_bits << 1) + self.get_tree_cell(self.root.unwrap(), (x, y)) as u16;
+                all_bits = (all_bits << 1) + self.get_tree_cell(node, (x, y)) as u16;
             }
         }
         let (nw, ne, sw, se) = (
