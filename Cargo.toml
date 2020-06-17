@@ -23,6 +23,7 @@ debug = true
 
 [dependencies]
 sdl2 = "0.34.1"
+nalgebra = "0.21.1"
 
 eyre = "0.4.3"
 color-eyre = { version = "0.3.4", features = [ "capture-spantrace"] }

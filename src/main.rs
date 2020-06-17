@@ -12,6 +12,7 @@ pub use tracing::{
 };
 
 mod core;
+mod graphics;
 mod logging;
 mod node;
 mod simulator;
