@@ -4,15 +4,22 @@ use std::{
     ops::{Add, AddAssign, Sub, SubAssign},
 };
 
+#[repr(u8)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum Cell {
+    Dead = 0u8,
+    Alive = 1u8,
+}
+
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Position {
     pub x: i64,
     pub y: i64,
 }
 
-pub use Quadrant::*;
+pub(crate) use Quadrant::*;
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub enum Quadrant {
+pub(crate) enum Quadrant {
     NorthWest,
     NorthEast,
     SouthWest,
@@ -21,13 +28,13 @@ pub enum Quadrant {
 
 // use enum instead with East, West, etc. variants?
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Offset {
+pub(crate) struct Offset {
     pub dx: i64,
     pub dy: i64,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Level(pub u8);
+pub(crate) struct Level(u8);
 
 impl From<(i64, i64)> for Position {
     fn from(t: (i64, i64)) -> Self {
@@ -43,7 +50,7 @@ impl Position {
         Self { x, y }
     }
 
-    pub fn quadrant(self) -> Quadrant {
+    pub(crate) fn quadrant(self) -> Quadrant {
         match (self.x < 0, self.y < 0) {
             (true, true) => Quadrant::NorthWest,
             (false, true) => Quadrant::NorthEast,
@@ -52,17 +59,17 @@ impl Position {
         }
     }
 
-    pub fn relative_to(self, other: Self) -> Self {
+    pub(crate) fn relative_to(self, other: Self) -> Self {
         self.offset((-other.x, -other.y))
     }
 
     // use `Add` trait?
-    pub fn offset(self, offset: impl Into<Offset>) -> Self {
+    pub(crate) fn offset(self, offset: impl Into<Offset>) -> Self {
         let offset = offset.into();
         Self::new(self.x + offset.dx, self.y + offset.dy)
     }
 
-    pub fn in_bounds(self, level: Level) -> bool {
+    pub(crate) fn in_bounds(self, level: Level) -> bool {
         let bounds = level.coord_range();
         bounds.contains(&self.x) && bounds.contains(&self.y)
     }
@@ -75,7 +82,7 @@ impl From<(i64, i64)> for Offset {
 }
 
 impl Offset {
-    pub const fn new(dx: i64, dy: i64) -> Self {
+    pub(crate) const fn new(dx: i64, dy: i64) -> Self {
         Self { dx, dy }
     }
 }
@@ -161,14 +168,18 @@ impl SubAssign<u8> for Level {
 }
 
 impl Level {
-    pub const MAX_LEVEL: Self = Self(63);
-    pub const LEAF_LEVEL: Self = Self(0);
+    pub(crate) const MAX_LEVEL: Self = Self(63);
+    pub(crate) const LEAF_LEVEL: Self = Self(0);
 
-    pub const fn side_len(self) -> u64 {
+    pub(crate) fn new(n: u8) -> Self {
+        Self(n)
+    }
+
+    pub(crate) const fn side_len(self) -> u64 {
         1 << self.0
     }
 
-    pub fn quadrant_center(self, quadrant: Quadrant) -> Position {
+    pub(crate) fn quadrant_center(self, quadrant: Quadrant) -> Position {
         let delta = i64::try_from(self.side_len() / 4).unwrap();
         match quadrant {
             NorthWest => (-delta, -delta).into(),
@@ -178,30 +189,31 @@ impl Level {
         }
     }
 
-    pub const fn min_coord(self) -> i64 {
+    pub(crate) const fn min_coord(self) -> i64 {
         -(1 << (self.0 - 1))
     }
 
-    pub const fn max_coord(self) -> i64 {
+    pub(crate) const fn max_coord(self) -> i64 {
         (1 << (self.0 - 1)) - 1
     }
 
-    pub const fn coord_range(self) -> std::ops::Range<i64> {
+    pub(crate) const fn coord_range(self) -> std::ops::Range<i64> {
         self.min_coord()..self.max_coord()
     }
 
     #[allow(dead_code)]
-    pub fn min_pos(self) -> Position {
+    pub(crate) fn min_pos(self) -> Position {
         let min = Self::min_coord(self);
         (min, min).into()
     }
 
     #[allow(dead_code)]
-    pub fn max_pos(self) -> Position {
+    pub(crate) fn max_pos(self) -> Position {
         let max = Self::max_coord(self);
         (max, max).into()
     }
 
+    #[allow(dead_code)]
     pub fn max_steps(self) -> u64 {
         debug_assert!(self.0 >= 2, "inode evolution is level 2 or higher");
         1u64 << (self.0 - 2)
