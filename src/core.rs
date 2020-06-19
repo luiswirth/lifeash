@@ -202,6 +202,11 @@ impl Level {
         (max, max).into()
     }
 
+    pub fn max_steps(&self) -> u64 {
+        debug_assert!(self.0 >= 2, "inode evolution is level 2 or higher");
+        1u64 << (self.0 - 2)
+    }
+
     fn check_validity(self) {
         if self > Self::MAX_LEVEL {
             panic!("the maximal level ({}) was exceeded", Self::MAX_LEVEL.0);

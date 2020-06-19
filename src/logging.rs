@@ -1,4 +1,4 @@
-pub fn setup() {
+pub fn setup_subscriber() {
     use tracing_error::ErrorLayer;
     use tracing_subscriber::{fmt, prelude::*, EnvFilter};
     let fmt_layer = fmt::layer().with_target(false);
