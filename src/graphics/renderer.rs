@@ -8,10 +8,12 @@ use sdl2::{
     EventPump,
 };
 
-use crate::node::Cell;
+use hl::{Cell, Universe};
 
 const CELL_SIZE: u32 = 10;
 const CELL_PADDING: u32 = 2;
+
+const CAMERA_SPEED: f32 = 10.0;
 
 use nalgebra::{Matrix2, Point2, Rotation2};
 type Matrix2f = Matrix2<f32>;
@@ -23,10 +25,8 @@ pub struct Renderer {
 }
 
 struct Camera {
-    zoom: f32,
-    rotation: f32,
     position: Point2<f32>,
-    matrix: Option<Matrix2f>,
+    zoom_level: f32,
 }
 
 impl Renderer {
@@ -65,12 +65,28 @@ impl Renderer {
                     keycode: Some(Keycode::Q),
                     ..
                 } => std::process::exit(0),
+                Event::KeyDown {
+                    keycode: Some(Keycode::W),
+                    ..
+                } => self.camera.position.y -= CAMERA_SPEED,
+                Event::KeyDown {
+                    keycode: Some(Keycode::S),
+                    ..
+                } => self.camera.position.y += CAMERA_SPEED,
+                Event::KeyDown {
+                    keycode: Some(Keycode::A),
+                    ..
+                } => self.camera.position.x -= CAMERA_SPEED,
+                Event::KeyDown {
+                    keycode: Some(Keycode::D),
+                    ..
+                } => self.camera.position.x += CAMERA_SPEED,
                 _ => {}
             }
         }
     }
 
-    pub fn render(&mut self) {
+    pub fn render(&mut self, universe: &Universe) {
         let canvas = &mut self.canvas;
 
         let mvp = Matrix2::<f32>::identity();
@@ -87,7 +103,10 @@ impl Renderer {
 
         let center = {
             let size = canvas.viewport();
-            Point::new(size.width() as i32 / 2, size.height() as i32 / 2)
+            Point::new(
+                size.width() as i32 / 2 - self.camera.position.x as i32,
+                size.height() as i32 / 2 - self.camera.position.y as i32,
+            )
         };
 
         let x_range = center.x() / CELL_SIZE as i32;
@@ -95,7 +114,7 @@ impl Renderer {
 
         for y in -y_range..y_range {
             for x in -x_range..x_range {
-                let alive = match self.universe.get_cell((x as i64, y as i64)) {
+                let alive = match universe.get_cell((x as i64, y as i64)) {
                     Cell::Dead => false,
                     Cell::Alive => true,
                 };
@@ -121,37 +140,16 @@ impl Renderer {
 impl Camera {
     fn new() -> Self {
         Self {
-            zoom: 1.0,
-            rotation: 0.0,
+            zoom_level: 1.0,
             position: Point2::new(0.0, 0.0),
-            matrix: None,
         }
     }
 
-    fn set_zoom(&mut self, zoom: f32) {
-        self.matrix = None;
-        self.zoom = zoom;
-    }
-
-    fn set_rotation(&mut self, angle: f32) {
-        self.matrix = None;
-        self.rotation = angle;
+    fn set_zoom(&mut self, level: f32) {
+        self.zoom_level = level;
     }
 
     fn set_position(&mut self, position: Point2<f32>) {
-        self.matrix = None;
         self.position = position;
-    }
-
-    fn matrix(&mut self) -> Matrix2f {
-        if let Some(matrix) = self.matrix {
-            matrix
-        } else {
-            let mut matrix = Matrix2f::identity();
-            matrix *= Rotation2::new(self.rotation);
-            matrix *= self.zoom;
-            self.matrix = Some(matrix);
-            self.matrix.unwrap()
-        }
     }
 }

@@ -43,7 +43,7 @@ impl Simulator {
     }
 
     pub fn render(&mut self) {
-        self.renderer.render();
+        self.renderer.render(&self.universe);
     }
 
     pub fn read_rls(&mut self, pattern: &str) {
