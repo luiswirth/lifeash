@@ -72,7 +72,7 @@ impl Leaf {
     }
 
     #[allow(dead_code)]
-    pub fn alive(&self) -> bool {
+    pub fn alive(self) -> bool {
         match self.0 {
             Cell::Dead => false,
             Cell::Alive => true,

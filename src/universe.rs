@@ -5,6 +5,7 @@ use crate::{
     node::{Cell, Inode, Leaf, Node},
 };
 
+#[derive(Default)]
 pub struct Universe {
     table: HashMap<Id, Node>,
     root: Option<Id>,

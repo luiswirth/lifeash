@@ -202,7 +202,7 @@ impl Level {
         (max, max).into()
     }
 
-    pub fn max_steps(&self) -> u64 {
+    pub fn max_steps(self) -> u64 {
         debug_assert!(self.0 >= 2, "inode evolution is level 2 or higher");
         1u64 << (self.0 - 2)
     }
