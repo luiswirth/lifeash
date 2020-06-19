@@ -11,7 +11,9 @@ pub use tracing::{
 
 use std::io::prelude::*;
 
-use crate::{node::Cell, renderer::Renderer, universe::Universe};
+use hl::{Cell, Universe};
+
+use crate::graphics::renderer::Renderer;
 
 pub struct Simulator {
     universe: Universe,

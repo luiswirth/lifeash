@@ -11,12 +11,11 @@ pub use tracing::{
     warn_span,
 };
 
-mod core;
+extern crate hashlife as hl;
+
 mod graphics;
 mod logging;
-mod node;
 mod simulator;
-mod universe;
 
 use simulator::Simulator;
 
@@ -44,7 +43,7 @@ o$3b2o56bob2o$4bo9b2o37bo5b3o2bo$2bo10bobo37b2o3bo3b2o$2b5o8bo5b2o35b
 obo$27b2obobo3bo2bo$27bo2bo2b2ob4o$29b2o4bo$35bobo$36b2o!"#;
 
 fn main() -> Result<()> {
-    logging::setup();
+    logging::setup_subscriber();
 
     info!("starting simulator");
     let mut simulator = Simulator::new();
