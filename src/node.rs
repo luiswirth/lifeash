@@ -6,10 +6,13 @@ pub use tracing::{
 
 use std::hash::{Hash, Hasher};
 
-use crate::{core::Level, universe::Id};
+use crate::{
+    core::{Cell, Level},
+    universe::Id,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum Node {
+pub(crate) enum Node {
     // always level 0
     Leaf(Leaf),
     // Node::Inner can never have level 0
@@ -17,25 +20,18 @@ pub enum Node {
 }
 
 #[derive(Debug, Clone)]
-pub struct Inode {
-    pub level: Level,
-    pub population: u32,
-    pub result: Option<Id>,
-    pub nw: Id,
-    pub ne: Id,
-    pub sw: Id,
-    pub se: Id,
-}
-
-#[repr(u8)]
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum Cell {
-    Dead = 0u8,
-    Alive = 1u8,
+pub(crate) struct Inode {
+    pub(crate) level: Level,
+    pub(crate) population: u32,
+    pub(crate) result: Option<Id>,
+    pub(crate) nw: Id,
+    pub(crate) ne: Id,
+    pub(crate) sw: Id,
+    pub(crate) se: Id,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Leaf(pub Cell);
+pub(crate) struct Leaf(pub(crate) Cell);
 
 impl PartialEq for Inode {
     fn eq(&self, other: &Self) -> bool {
@@ -66,13 +62,12 @@ impl From<Inode> for Node {
 }
 
 impl Leaf {
-    #[allow(dead_code)]
-    pub fn new(cell: Cell) -> Self {
+    pub(crate) fn new(cell: Cell) -> Self {
         Self(cell)
     }
 
     #[allow(dead_code)]
-    pub fn alive(&self) -> bool {
+    fn alive(self) -> bool {
         match self.0 {
             Cell::Dead => false,
             Cell::Alive => true,
@@ -82,7 +77,7 @@ impl Leaf {
 
 impl Node {
     #[inline(always)]
-    pub fn population(&self) -> u32 {
+    pub(crate) fn population(&self) -> u32 {
         match *self {
             Node::Inode(ref i) => i.population,
             Node::Leaf(c) => c.0 as u32,
@@ -90,7 +85,7 @@ impl Node {
     }
 
     #[inline(always)]
-    pub fn level(&self) -> Level {
+    pub(crate) fn level(&self) -> Level {
         match *self {
             Node::Inode(ref i) => i.level,
             Node::Leaf(_) => Level::LEAF_LEVEL,

@@ -1,10 +1,11 @@
 use std::collections::HashMap;
 
 use crate::{
-    core::{Level, Position, Quadrant::*},
-    node::{Cell, Inode, Leaf, Node},
+    core::{Cell, Level, Position, Quadrant::*},
+    node::{Inode, Leaf, Node},
 };
 
+#[derive(Default)]
 pub struct Universe {
     table: HashMap<Id, Node>,
     root: Option<Id>,
@@ -12,7 +13,7 @@ pub struct Universe {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Id(pub usize);
+pub struct Id(usize);
 
 impl Id {
     fn node(self, univ: &Universe) -> &Node {
@@ -46,8 +47,9 @@ impl Universe {
         }
     }
 
+    // TODO: remove
     pub fn initalize(&mut self) {
-        self.root = Some(self.new_empty_tree(Level(3)));
+        self.root = Some(self.new_empty_tree(Level::new(3)));
     }
 }
 
@@ -67,8 +69,8 @@ impl Universe {
         }
     }
 
-    pub fn new_leaf(&mut self, cell: Cell) -> Id {
-        let node = Node::Leaf(Leaf(cell));
+    fn new_leaf(&mut self, cell: Cell) -> Id {
+        let node = Node::Leaf(Leaf::new(cell));
         self.get_id(node)
     }
 
@@ -93,7 +95,7 @@ impl Universe {
                 }
             }
             (Node::Leaf(nw), Node::Leaf(ne), Node::Leaf(sw), Node::Leaf(se)) => Inode {
-                level: Level(1),
+                level: Level::new(1),
                 population: [nw, ne, sw, se]
                     .iter()
                     .filter(|c| matches!(c.0, Cell::Alive))
@@ -121,7 +123,7 @@ impl Universe {
 }
 
 impl Universe {
-    pub fn get_tree_cell(&self, tree: Id, pos: impl Into<Position>) -> Cell {
+    fn get_tree_cell(&self, tree: Id, pos: impl Into<Position>) -> Cell {
         let pos = pos.into();
         match *tree.node(self) {
             Node::Leaf(c) => c.0,
@@ -202,7 +204,7 @@ impl Universe {
 }
 
 impl Universe {
-    pub fn expand(&mut self) {
+    fn expand(&mut self) {
         let level = self.root.unwrap().inode(self).level;
         let border = self.new_empty_tree(level - 1);
         let (root_nw, root_ne, root_sw, root_se) = {
@@ -219,10 +221,10 @@ impl Universe {
     }
 
     // since recursive make second function which always calls on root
-    pub fn evolve_tree(&mut self, tree: Id) -> Id {
+    fn evolve_tree(&mut self, tree: Id) -> Id {
         {
             let inode = tree.inode(self);
-            debug_assert!(inode.level >= Level(2), "must be level 2 or higher");
+            debug_assert!(inode.level >= Level::new(2), "must be level 2 or higher");
         }
 
         if let Some(result) = tree.inode(self).result {
@@ -328,7 +330,7 @@ impl Universe {
 
 // this can move into another class, when the refactoring of the leaves to Bool8x8 has been done.
 impl Universe {
-    pub fn centered_horizontal(&mut self, west: Id, east: Id) -> Id {
+    fn centered_horizontal(&mut self, west: Id, east: Id) -> Id {
         let (west, east) = (west.inode(self), east.inode(self));
         debug_assert!(west.level == east.level, "levels must be the same");
 
@@ -341,7 +343,7 @@ impl Universe {
         self.new_inode(nw, ne, sw, se)
     }
 
-    pub fn centered_vertical(&mut self, north: Id, south: Id) -> Id {
+    fn centered_vertical(&mut self, north: Id, south: Id) -> Id {
         let (north, south) = (north.inode(self), south.inode(self));
         debug_assert!(north.level == south.level, "levels must be the same");
 
@@ -354,7 +356,7 @@ impl Universe {
         self.new_inode(nw, ne, sw, se)
     }
 
-    pub fn centered_sub(&mut self, node: Id) -> Id {
+    fn centered_sub(&mut self, node: Id) -> Id {
         let node = node.inode(self);
 
         let (nw, ne, sw, se) = (
@@ -366,7 +368,7 @@ impl Universe {
         self.new_inode(nw, ne, sw, se)
     }
 
-    pub fn centered_subsub(&mut self, node: Id) -> Id {
+    fn centered_subsub(&mut self, node: Id) -> Id {
         let node = node.inode(self);
         let (nw, ne, sw, se) = (
             node.nw.inode(self).se.inode(self).se,
@@ -381,6 +383,7 @@ impl Universe {
 // old universe interface
 // TODO: refactor (maybe make this a store module and put this in a "new" universe module)
 
+// Universe API
 impl Universe {
     pub fn set_cell(&mut self, pos: impl Into<Position>, cell: Cell) {
         let pos = pos.into();

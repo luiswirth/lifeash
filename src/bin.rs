@@ -11,18 +11,17 @@ pub use tracing::{
     warn_span,
 };
 
-mod core;
+extern crate hashlife as hl;
+
 mod logging;
-mod node;
 mod simulator;
-mod universe;
 
 use simulator::Simulator;
 
 const BI_BLOCK_PATTERN: &str = "oo$oo!";
 
 fn main() -> Result<()> {
-    logging::setup();
+    logging::setup_subscriber();
 
     info!("starting simulator");
     let mut simulator = Simulator::new();
