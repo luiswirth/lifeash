@@ -10,23 +10,15 @@ use sdl2::{
 
 use hl::{Cell, Universe};
 
+use super::camera::Camera;
+
 const CELL_SIZE: u32 = 10;
 const CELL_PADDING: u32 = 2;
-
-const CAMERA_SPEED: f32 = 10.0;
-
-use nalgebra::{Matrix2, Point2, Rotation2};
-type Matrix2f = Matrix2<f32>;
 
 pub struct Renderer {
     canvas: Canvas<Window>,
     event_pump: EventPump,
     camera: Camera,
-}
-
-struct Camera {
-    position: Point2<f32>,
-    zoom_level: f32,
 }
 
 impl Renderer {
@@ -60,27 +52,31 @@ impl Renderer {
                 | Event::KeyDown {
                     keycode: Some(Keycode::Escape),
                     ..
-                }
-                | Event::KeyDown {
-                    keycode: Some(Keycode::Q),
-                    ..
                 } => std::process::exit(0),
                 Event::KeyDown {
                     keycode: Some(Keycode::W),
                     ..
-                } => self.camera.position.y -= CAMERA_SPEED,
+                } => self.camera.position.1 -= CAMERA_SPEED,
                 Event::KeyDown {
                     keycode: Some(Keycode::S),
                     ..
-                } => self.camera.position.y += CAMERA_SPEED,
+                } => self.camera.position.1 += CAMERA_SPEED,
                 Event::KeyDown {
                     keycode: Some(Keycode::A),
                     ..
-                } => self.camera.position.x -= CAMERA_SPEED,
+                } => self.camera.position.0 -= CAMERA_SPEED,
                 Event::KeyDown {
                     keycode: Some(Keycode::D),
                     ..
-                } => self.camera.position.x += CAMERA_SPEED,
+                } => self.camera.position.0 += CAMERA_SPEED,
+                Event::KeyDown {
+                    keycode: Some(Keycode::E),
+                    ..
+                } => self.camera.zoom_level *= ZOOM_FACTOR,
+                Event::KeyDown {
+                    keycode: Some(Keycode::Q),
+                    ..
+                } => self.camera.zoom_level /= ZOOM_FACTOR,
                 _ => {}
             }
         }
@@ -103,10 +99,7 @@ impl Renderer {
 
         let center = {
             let size = canvas.viewport();
-            Point::new(
-                size.width() as i32 / 2 - self.camera.position.x as i32,
-                size.height() as i32 / 2 - self.camera.position.y as i32,
-            )
+            Point::new(size.width() as i32 / 2, size.height() as i32 / 2)
         };
 
         let x_range = center.x() / CELL_SIZE as i32;
@@ -120,12 +113,8 @@ impl Renderer {
                 };
 
                 if alive {
-                    let center = center
-                        + Point::new(
-                            x as i32 * (CELL_SIZE + CELL_PADDING) as i32,
-                            y as i32 * (CELL_SIZE + CELL_PADDING) as i32,
-                        );
-                    let rect = Rect::from_center(center, CELL_SIZE, CELL_SIZE);
+                    let size = canvas.viewport();
+                    let rect = self.camera.project(x + center.x(), y + center.y());
 
                     canvas.fill_rect(rect).unwrap();
                 }
@@ -134,22 +123,5 @@ impl Renderer {
 
         canvas.present();
         //std::thread::sleep(std::time::Duration::from_millis(10));
-    }
-}
-
-impl Camera {
-    fn new() -> Self {
-        Self {
-            zoom_level: 1.0,
-            position: Point2::new(0.0, 0.0),
-        }
-    }
-
-    fn set_zoom(&mut self, level: f32) {
-        self.zoom_level = level;
-    }
-
-    fn set_position(&mut self, position: Point2<f32>) {
-        self.position = position;
     }
 }
