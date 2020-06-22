@@ -13,8 +13,12 @@ use std::io::prelude::*;
 
 use hl::{Cell, Universe};
 
+use crate::graphics::renderer::Renderer;
+
 pub struct Simulator {
     universe: Universe,
+    renderer: Renderer,
+    tick: u64,
 }
 
 impl Simulator {
@@ -22,40 +26,32 @@ impl Simulator {
         let mut universe = Universe::new();
         universe.initalize();
 
-        Simulator { universe }
+        let renderer = Renderer::new();
+
+        Simulator {
+            universe,
+            renderer,
+            tick: 0,
+        }
     }
 
     pub fn run(&mut self) {
         loop {
             self.render();
             self.update();
+            self.tick = self.tick.wrapping_add(1);
         }
     }
 
     fn update(&mut self) {
-        self.universe.evolve();
+        if self.tick % 1000 == 0 {
+            self.universe.evolve();
+        }
+        self.renderer.update();
     }
 
-    pub fn render(&self) {
-        for y in -8..8 {
-            for x in -8..8 {
-                let alive = match self.universe.get_cell((x, y)) {
-                    Cell::Dead => false,
-                    Cell::Alive => true,
-                };
-                if alive {
-                    print!("o");
-                } else {
-                    print!(" ");
-                }
-            }
-            println!();
-        }
-        println!();
-
-        //std::thread::sleep(std::time::Duration::from_millis(1000));
-        let mut string = String::new();
-        std::io::stdin().read_line(&mut string).unwrap();
+    pub fn render(&mut self) {
+        self.renderer.render(&self.universe);
     }
 
     pub fn read_rls(&mut self, pattern: &str) {

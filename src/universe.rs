@@ -400,8 +400,14 @@ impl Universe {
     }
 
     pub fn get_cell(&self, pos: impl Into<Position>) -> Cell {
+        let pos = pos.into();
         let root = self.root.unwrap();
-        self.get_tree_cell(root, pos)
+        let coord_range = root.node(self).level().coord_range();
+        if coord_range.contains(&pos.x) && coord_range.contains(&pos.y) {
+            self.get_tree_cell(root, pos)
+        } else {
+            Cell::Dead
+        }
     }
 
     pub fn evolve(&mut self) {
