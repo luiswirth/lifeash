@@ -11,7 +11,7 @@ pub use tracing::{
 
 use std::io::prelude::*;
 
-use hl::{Cell, Universe};
+use la::{Cell, Universe};
 
 use crate::graphics::renderer::Renderer;
 

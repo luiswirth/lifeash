@@ -6,7 +6,7 @@ use sdl2::{
 use std::convert::TryFrom;
 
 use super::renderer::{CELL_PADDING, CELL_SIZE};
-use hl::Position;
+use la::Position;
 
 pub const CAMERA_SPEED: f32 = 1.0;
 pub const ZOOM_FACTOR: f32 = 1.1;

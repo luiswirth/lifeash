@@ -11,7 +11,7 @@ pub use tracing::{
     warn_span,
 };
 
-extern crate hashlife as hl;
+extern crate lifeash as la;
 
 mod graphics;
 mod logging;

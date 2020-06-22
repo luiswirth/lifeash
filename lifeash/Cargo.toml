@@ -1,0 +1,18 @@
+[package]
+name = "lifeash"
+version = "0.1.0"
+authors = ["Luis Wirth <lwirth2000@gmail.com>"]
+edition = "2018"
+
+description = "A Hashlife (Gosper's algorithm) implementation library written in Rust"
+readme = "README.md"
+
+homepage = "https://github.com/LU15W1R7H/lifeash"
+repository = "https://github.com/LU15W1R7H/lifeash.git"
+
+#documentation = "docs.rs link"
+keywords = ["hashlife", "cellular-automata", "hashing", "memoization" ]
+categories = [ "simulation" ]
+license = "MIT"
+
+[dependencies]

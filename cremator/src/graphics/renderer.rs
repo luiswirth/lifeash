@@ -2,7 +2,7 @@ use sdl2::{
     event::Event, keyboard::Keycode, pixels::Color, render::Canvas, video::Window, EventPump,
 };
 
-use hl::{Cell, Universe};
+use la::{Cell, Universe};
 
 use super::camera::{Camera, CAMERA_SPEED, ZOOM_FACTOR};
 

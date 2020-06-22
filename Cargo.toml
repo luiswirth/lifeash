@@ -1,40 +1,9 @@
-[package]
-name = "hasherlife"
-version = "0.1.0"
-authors = ["Luis Wirth <lwirth2000@gmail.com>"]
-edition = "2018"
-
-description = "A Hashlife (Gosper's algorithm) implementation written in Rust"
-readme = "README.md"
-
-homepage = "https://github.com/LU15W1R7H/hasherlife"
-repository = "https://github.com/LU15W1R7H/hasherlife.git"
-
-#documentation = "docs.rs link"
-keywords = ["hashlife", "cellular-automata", "hashing", "memoization" ]
-categories = [ "simulation" ]
-license = "MIT"
-
-#[badges]
-
-[lib]
-name = "hashlife"
-path = "src/lib.rs"
-
-[[bin]]
-name = "hashlife-bin"
-path = "src/bin.rs"
+[workspace]
+members = [
+	"lifeash",
+	"cremator"
+]
 
 # for cargo flamegraph
 [profile.release]
 debug = true
-
-[dependencies]
-sdl2 = "0.34.1"
-#nalgebra = "0.21.1"
-
-eyre = "0.5.0"
-color-eyre = { version = "0.4.1", features = [ "capture-spantrace"] }
-tracing = "0.1.15"
-tracing-error = "0.1.2"
-tracing-subscriber = { version = "0.2.6", features = [ "env-filter" ] }
