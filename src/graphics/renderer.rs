@@ -1,19 +1,13 @@
 use sdl2::{
-    event::Event,
-    keyboard::Keycode,
-    pixels::Color,
-    rect::{Point, Rect},
-    render::Canvas,
-    video::Window,
-    EventPump,
+    event::Event, keyboard::Keycode, pixels::Color, render::Canvas, video::Window, EventPump,
 };
 
 use hl::{Cell, Universe};
 
-use super::camera::Camera;
+use super::camera::{Camera, CAMERA_SPEED, ZOOM_FACTOR};
 
-const CELL_SIZE: u32 = 10;
-const CELL_PADDING: u32 = 2;
+pub const CELL_SIZE: u32 = 10;
+pub const CELL_PADDING: u32 = 2;
 
 pub struct Renderer {
     canvas: Canvas<Window>,
@@ -85,43 +79,28 @@ impl Renderer {
     pub fn render(&mut self, universe: &Universe) {
         let canvas = &mut self.canvas;
 
-        let mvp = Matrix2::<f32>::identity();
-
-        //mvp *= mat3.scale      1, -1             # invert the Y axis
-        //mvp *= mat3.translate  gfx_w/2, gfx_h/2  # translate to center of screen
-        //mvp *= mat3.rotate     cam.rotation      # rotate camera
-        //mvp *= mat3.scale      cam.scale         # convert from units to pixels, 1 unit = gfx_w/40 pixels
-        //mvp *= mat3.translate  -cam.x, -cam.y    # make (cam.x, cam.y) the center of the screen
-
         canvas.set_draw_color(Color::BLACK);
         canvas.clear();
-        canvas.set_draw_color(Color::WHITE);
+        canvas.set_draw_color(Color::GREEN);
 
-        let center = {
-            let size = canvas.viewport();
-            Point::new(size.width() as i32 / 2, size.height() as i32 / 2)
-        };
+        // calculate range in which we have to Universe::get_cell
+        let x_range = self.camera.x_range(canvas.window());
+        let y_range = self.camera.y_range(canvas.window());
 
-        let x_range = center.x() / CELL_SIZE as i32;
-        let y_range = center.y() / CELL_SIZE as i32;
-
-        for y in -y_range..y_range {
-            for x in -x_range..x_range {
-                let alive = match universe.get_cell((x as i64, y as i64)) {
+        for y in y_range {
+            for x in x_range.clone() {
+                let alive = match universe.get_cell((x, y)) {
                     Cell::Dead => false,
                     Cell::Alive => true,
                 };
 
                 if alive {
-                    let size = canvas.viewport();
-                    let rect = self.camera.project(x + center.x(), y + center.y());
-
+                    let rect = self.camera.project(canvas.window(), (x, y));
                     canvas.fill_rect(rect).unwrap();
                 }
             }
         }
 
         canvas.present();
-        //std::thread::sleep(std::time::Duration::from_millis(10));
     }
 }

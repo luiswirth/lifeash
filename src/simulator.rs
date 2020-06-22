@@ -18,6 +18,7 @@ use crate::graphics::renderer::Renderer;
 pub struct Simulator {
     universe: Universe,
     renderer: Renderer,
+    tick: u64,
 }
 
 impl Simulator {
@@ -27,18 +28,25 @@ impl Simulator {
 
         let renderer = Renderer::new();
 
-        Simulator { universe, renderer }
+        Simulator {
+            universe,
+            renderer,
+            tick: 0,
+        }
     }
 
     pub fn run(&mut self) {
         loop {
             self.render();
             self.update();
+            self.tick = self.tick.wrapping_add(1);
         }
     }
 
     fn update(&mut self) {
-        self.universe.evolve();
+        if self.tick % 1000 == 0 {
+            self.universe.evolve();
+        }
         self.renderer.update();
     }
 
