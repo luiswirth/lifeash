@@ -26,6 +26,7 @@ jobs:
     name: Test
     runs-on: ubuntu-latest
     steps:
+      - run: sudo apt-get install libsdl2-dev
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
         with:
@@ -72,6 +73,7 @@ jobs:
     name: Code coverage
     runs-on: ubuntu-latest
     steps:
+      - run: sudo apt-get install libsdl2-dev
       - name: Checkout repository
         uses: actions/checkout@v2
 
