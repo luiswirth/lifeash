@@ -378,13 +378,95 @@ impl Universe {
         );
         self.new_inode(nw, ne, sw, se)
     }
+
 }
 
-// old universe interface
-// TODO: refactor (maybe make this a store module and put this in a "new" universe module)
+// superspeed stuff:
+impl Universe {
+
+    fn superspeed_evolve(&mut self, id: Id) -> Id {
+        if let Some(result) = id.inode(self).result {
+            return result;
+        }
+
+        let result = if id.inode(self).population == 0 {
+            id.inode(self).nw
+        } else if id.inode(self).level == 2 {
+            self.manual_evolve(id)
+        } else {
+            let n00 = self.superspeed_evolve(id.inode(self).nw);
+            let n01 = self.horizontal_forward(id.inode(self).nw, id.inode(self).ne);
+            let n02 = self.superspeed_evolve(id.inode(self).ne);
+            let n10 = self.vertical_forward(id.inode(self).nw, id.inode(self).sw);
+            let n11 = self.center_forward(id);
+            let n12 = self.vertical_forward(id.inode(self).ne, id.inode(self).se);
+            let n20 = self.superspeed_evolve(id.inode(self).sw);
+            let n21 = self.horizontal_forward(id.inode(self).sw, id.inode(self).se);
+            let n22 = self.superspeed_evolve(id.inode(self).se);
+
+            let (nw, ne, sw, se) = {
+                let nw = self.new_inode(n00, n01, n10, n11);
+                let ne = self.new_inode(n01, n02, n11, n12);
+                let sw = self.new_inode(n10, n11, n20, n21);
+                let se = self.new_inode(n11, n12, n21, n22);
+
+                (
+                    self.superspeed_evolve(nw),
+                    self.superspeed_evolve(ne),
+                    self.superspeed_evolve(sw),
+                    self.superspeed_evolve(se),
+                )
+            };
+            self.new_inode(nw, ne, sw, se)
+        };
+        // TODO have mutable way of changing this
+        if let Node::Inode(inode) = self.table.get_mut(&id).unwrap() {
+            inode.result = Some(result);
+        }
+        result
+    }
+
+    fn horizontal_forward(&mut self, west: Id, east: Id) -> Id {
+        let (west, east) = (west.inode(self), east.inode(self));
+        debug_assert!(west.level == east.level, "levels must be the same");
+
+        let (nw, ne, sw, se) = (west.nw, east.nw, west.se, east.sw);
+        let id = self.new_inode(nw, ne, sw, se);
+        self.superspeed_evolve(id)
+    }
+
+    fn vertical_forward(&mut self, north: Id, south: Id) -> Id {
+        let (north, south) = (north.inode(self), south.inode(self));
+        debug_assert!(north.level == south.level, "levels must be the same");
+
+        let (nw, ne, sw, se) = (north.sw, north.se, south.nw, south.ne);
+        let id = self.new_inode(nw, ne, sw, se);
+        self.superspeed_evolve(id)
+    }
+
+    fn center_forward(&mut self, node: Id) -> Id {
+        let node = node.inode(self);
+
+        let (nw, ne, sw, se) = (
+            node.nw.inode(self).se,
+            node.ne.inode(self).sw,
+            node.sw.inode(self).ne,
+            node.se.inode(self).nw,
+        );
+        let id = self.new_inode(nw, ne, sw, se);
+        self.superspeed_evolve(id)
+    }
+
+}
+
 
 // Universe API
+// TODO: refactor (maybe make this a store module and put this in a "new" universe module)
 impl Universe {
+    pub fn population(&self) -> u32 {
+        self.root.unwrap().node(self).population()
+    }
+
     pub fn set_cell(&mut self, pos: impl Into<Position>, cell: Cell) {
         let pos = pos.into();
 
@@ -468,7 +550,8 @@ impl Universe {
 
         let root = self.root.unwrap();
 
-        self.root = Some(self.evolve_tree(root));
+        //self.root = Some(self.evolve_tree(root));
+        self.root = Some(self.superspeed_evolve(root));
         self.generation += 1;
     }
 }
