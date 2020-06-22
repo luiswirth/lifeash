@@ -28,7 +28,7 @@ pub(crate) enum Quadrant {
 
 // use enum instead with East, West, etc. variants?
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub(crate) struct Offset {
+pub struct Offset {
     pub dx: i64,
     pub dy: i64,
 }
@@ -60,13 +60,7 @@ impl Position {
     }
 
     pub(crate) fn relative_to(self, other: Self) -> Self {
-        self.offset((-other.x, -other.y))
-    }
-
-    // use `Add` trait?
-    pub(crate) fn offset(self, offset: impl Into<Offset>) -> Self {
-        let offset = offset.into();
-        Self::new(self.x + offset.dx, self.y + offset.dy)
+        self + Offset::new(-other.x, -other.y)
     }
 
     pub(crate) fn in_bounds(self, level: Level) -> bool {
@@ -81,8 +75,64 @@ impl From<(i64, i64)> for Offset {
     }
 }
 
+impl Add for Offset {
+    type Output = Self;
+    fn add(self, other: Self) -> Self::Output {
+        Offset::new(self.dx + other.dy, self.dy + other.dy)
+    }
+}
+
+impl AddAssign for Offset {
+    fn add_assign(&mut self, other: Self) {
+        self.dx += other.dx;
+        self.dy += other.dy;
+    }
+}
+
+impl Sub for Offset {
+    type Output = Self;
+    fn sub(self, other: Self) -> Self::Output {
+        Offset::new(self.dx - other.dy, self.dy - other.dy)
+    }
+}
+
+impl SubAssign for Offset {
+    fn sub_assign(&mut self, other: Self) {
+        self.dx -= other.dx;
+        self.dy -= other.dy;
+    }
+}
+
+impl Add<Offset> for Position {
+    type Output = Self;
+    fn add(self, other: Offset) -> Self::Output {
+        Position::new(self.x + other.dx, self.y + other.dy)
+    }
+}
+
+impl AddAssign<Offset> for Position {
+    fn add_assign(&mut self, other: Offset) {
+        self.x += other.dx;
+        self.y += other.dy;
+    }
+}
+
+impl Sub<Offset> for Position {
+    type Output = Self;
+    fn sub(self, other: Offset) -> Self::Output {
+        Position::new(self.x - other.dx, self.y - other.dy)
+    }
+}
+
+impl SubAssign<Offset> for Position {
+    fn sub_assign(&mut self, other: Offset) {
+        self.x -= other.dx;
+        self.y -= other.dy;
+    }
+}
+
 impl Offset {
-    pub(crate) const fn new(dx: i64, dy: i64) -> Self {
+    pub const fn new(dx: i64, dy: i64) -> Self {
         Self { dx, dy }
     }
 }
