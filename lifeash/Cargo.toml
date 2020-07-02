@@ -9,8 +9,8 @@ readme = "README.md"
 
 homepage = "https://github.com/LU15W1R7H/lifeash"
 repository = "https://github.com/LU15W1R7H/lifeash.git"
+documentation = "https://docs.rs/lifeash"
 
-#documentation = "docs.rs link"
 keywords = ["hashlife", "cellular-automata", "hashing", "memoization" ]
 categories = [ "simulation" ]
 license = "MIT"

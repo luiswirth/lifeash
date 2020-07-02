@@ -10,8 +10,8 @@ readme = "README.md"
 
 homepage = "https://github.com/LU15W1R7H/lifeash"
 repository = "https://github.com/LU15W1R7H/lifeash.git"
+documentation = "https://docs.rs/cremator"
 
-#documentation = "docs.rs link"
 keywords = ["hashlife", "cellular-automata", "hashing", "memoization" ]
 categories = [ "simulation" ]
 license = "MIT"
@@ -19,11 +19,11 @@ license = "MIT"
 [dependencies]
 lifeash = { path = "../lifeash" }
 
-sdl2 = "0.34.1"
+sdl2 = "0.34.2"
 #nalgebra = "0.21.1"
 
 eyre = "0.5.0"
 color-eyre = { version = "0.4.1", features = [ "capture-spantrace"] }
 tracing = "0.1.15"
 tracing-error = "0.1.2"
-tracing-subscriber = { version = "0.2.6", features = [ "env-filter" ] }
+tracing-subscriber = { version = "0.2.7", features = [ "env-filter" ] }

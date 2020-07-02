@@ -68,6 +68,7 @@ obobobo21b$21bobobobo9bobobobo21b$22bobob3o7b3obobo22b$24bobo3b5o3bobo
 bo28b$28bob2ob2obo28b$26bobob2ob2obob2o25b$25bobo9bobo25b$25bo2b3o3b3o
 28b$26b2o37b$29bo2bo2b2o28b$26b3obobobo2bo27b$26bo3bobobob2o27b$27bobo
 4bo30b$28b2obo2bob2o27b$30bobobobo28b$30bobobobo28b$31b2ob2o!"#;
+
 fn main() -> Result<()> {
     logging::setup_subscriber();
 

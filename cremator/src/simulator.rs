@@ -44,7 +44,7 @@ impl Simulator {
     }
 
     fn update(&mut self) {
-        if self.tick % 1000 == 0 {
+        if self.tick % 10 == 0 {
             self.universe.evolve();
         }
         self.renderer.update();
