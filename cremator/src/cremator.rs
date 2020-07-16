@@ -9,49 +9,95 @@ pub use tracing::{
     warn_span,
 };
 
-use std::io::prelude::*;
+use std::{io::prelude::*, time::Instant};
+
+use glium::{
+    glutin::{
+        self,
+        event::{Event, VirtualKeyCode, WindowEvent},
+        event_loop::{ControlFlow, EventLoop},
+        window::WindowBuilder,
+    },
+    Display, Surface,
+};
 
 use la::{Cell, Universe};
 
 use crate::graphics::renderer::Renderer;
 
-pub struct Simulator {
-    universe: Universe,
+pub struct Cremator {
+    display: Display,
+    event_loop: EventLoop<()>,
     renderer: Renderer,
-    tick: u64,
+
+    universe: Universe,
+
+    tick_count: u64,
+    last_tick: Instant,
 }
 
-impl Simulator {
-    pub fn new() -> Simulator {
+impl Cremator {
+    pub fn new() -> Cremator {
+        // graphics context creation
+        let event_loop = EventLoop::new();
+        let context = glutin::ContextBuilder::new().with_vsync(true);
+        let builder = WindowBuilder::new()
+            .with_title(env!("CARGO_PKG_NAME"))
+            .with_inner_size(glutin::dpi::LogicalSize::new(1600f64, 1200f64));
+        let display =
+            Display::new(builder, context, &event_loop).expect("Failed to create display");
+        let renderer = Renderer::init(&display);
+
+        // universe creation
         let mut universe = Universe::new();
         universe.initalize();
 
-        let renderer = Renderer::new();
-
-        Simulator {
-            universe,
+        Cremator {
+            display,
+            event_loop,
             renderer,
-            tick: 0,
+            universe,
+            tick_count: 0,
+            last_tick: Instant::now(),
         }
     }
 
-    pub fn run(&mut self) {
-        loop {
-            self.render();
-            self.update();
-            self.tick = self.tick.wrapping_add(1);
-        }
+    pub fn run(self) {
+        self.event_loop
+            .run(move |event, _, control_flow| match event {
+                // beginning
+                Event::NewEvents(_) => {
+                    self.last_tick = Instant::now();
+                    self.tick_count = self.tick_count.wrapping_add(1);
+                }
+                // updating
+                Event::MainEventsCleared => self.update(),
+                // rendering
+                Event::RedrawRequested(_) => self.render(),
+                Event::RedrawEventsCleared => self.display.gl_window().window().request_redraw(),
+                // window events
+                Event::WindowEvent {
+                    event: WindowEvent::CloseRequested,
+                    ..
+                }
+                | Event::WindowEvent {
+                    event: WindowEvent::ReceivedCharacter('q'),
+                    ..
+                } => *control_flow = ControlFlow::Exit,
+                // hand over any left over events
+                event => self.renderer.handle_event(event, &self.display), // TODO: handle any other event
+            })
     }
 
     fn update(&mut self) {
-        if self.tick % 10 == 0 {
+        if self.tick_count % 10 == 0 {
             self.universe.evolve();
         }
         self.renderer.update();
     }
 
     pub fn render(&mut self) {
-        self.renderer.render(&self.universe);
+        self.renderer.render(&self.universe, &self.display);
     }
 
     pub fn read_rls(&mut self, pattern: &str) {
