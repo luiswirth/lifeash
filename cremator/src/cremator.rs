@@ -63,41 +63,48 @@ impl Cremator {
     }
 
     pub fn run(self) {
-        self.event_loop
-            .run(move |event, _, control_flow| match event {
-                // beginning
-                Event::NewEvents(_) => {
-                    self.last_tick = Instant::now();
-                    self.tick_count = self.tick_count.wrapping_add(1);
-                }
-                // updating
-                Event::MainEventsCleared => self.update(),
-                // rendering
-                Event::RedrawRequested(_) => self.render(),
-                Event::RedrawEventsCleared => self.display.gl_window().window().request_redraw(),
-                // window events
-                Event::WindowEvent {
-                    event: WindowEvent::CloseRequested,
-                    ..
-                }
-                | Event::WindowEvent {
-                    event: WindowEvent::ReceivedCharacter('q'),
-                    ..
-                } => *control_flow = ControlFlow::Exit,
-                // hand over any left over events
-                event => self.renderer.handle_event(event, &self.display), // TODO: handle any other event
-            })
+        let Cremator {
+            display,
+            event_loop,
+            mut renderer,
+            mut universe,
+            mut tick_count,
+            mut last_tick,
+        } = self;
+        event_loop.run(move |event, _, control_flow| match event {
+            // beginning
+            Event::NewEvents(_) => {
+                last_tick = Instant::now();
+                tick_count = tick_count.wrapping_add(1);
+            }
+            // updating
+            Event::MainEventsCleared => Self::update(&mut universe, &mut renderer, &mut tick_count),
+            // rendering
+            Event::RedrawRequested(_) => Self::render(&mut renderer, &universe, &display),
+            Event::RedrawEventsCleared => display.gl_window().window().request_redraw(),
+            // window events
+            Event::WindowEvent {
+                event: WindowEvent::CloseRequested,
+                ..
+            }
+            | Event::WindowEvent {
+                event: WindowEvent::ReceivedCharacter('q'),
+                ..
+            } => *control_flow = ControlFlow::Exit,
+            // hand over any left over events
+            event => renderer.handle_event(event, &display), // TODO: handle any other event
+        })
     }
 
-    fn update(&mut self) {
-        if self.tick_count % 10 == 0 {
-            self.universe.evolve();
+    fn update(universe: &mut Universe, renderer: &mut Renderer, tick_count: &u64) {
+        if tick_count % 10 == 0 {
+            universe.evolve();
         }
-        self.renderer.update();
+        renderer.update();
     }
 
-    pub fn render(&mut self) {
-        self.renderer.render(&self.universe, &self.display);
+    pub fn render(renderer: &mut Renderer, universe: &Universe, display: &Display) {
+        renderer.render(universe, display);
     }
 
     pub fn read_rls(&mut self, pattern: &str) {
