@@ -14,7 +14,7 @@ use std::{io::prelude::*, time::Instant};
 use glium::{
     glutin::{
         self,
-        event::{Event, VirtualKeyCode, WindowEvent},
+        event::{Event, WindowEvent},
         event_loop::{ControlFlow, EventLoop},
         window::WindowBuilder,
     },

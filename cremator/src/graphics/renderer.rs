@@ -88,30 +88,30 @@ impl Renderer {
 
     pub fn handle_event(&mut self, event: Event<()>, display: &Display) {
         match event {
-            //Event::WindowEvent {
-            //event: WindowEvent::ReceivedCharacter('w'),
-            //..
-            //} => self.camera.position.1 -= CAMERA_SPEED,
-            //Event::WindowEvent {
-            //event: WindowEvent::ReceivedCharacter('s'),
-            //..
-            //} => self.camera.position.1 += CAMERA_SPEED,
-            //Event::WindowEvent {
-            //event: WindowEvent::ReceivedCharacter('a'),
-            //..
-            //} => self.camera.position.0 -= CAMERA_SPEED,
-            //Event::WindowEvent {
-            //event: WindowEvent::ReceivedCharacter('d'),
-            //..
-            //} => self.camera.position.0 += CAMERA_SPEED,
-            //Event::WindowEvent {
-            //event: WindowEvent::ReceivedCharacter('q'),
-            //..
-            //} => self.camera.zoom_level /= ZOOM_FACTOR,
-            //Event::WindowEvent {
-            //event: WindowEvent::ReceivedCharacter('e'),
-            //..
-            //} => self.camera.zoom_level *= ZOOM_FACTOR,
+            Event::WindowEvent {
+                event: WindowEvent::ReceivedCharacter('w'),
+                ..
+            } => {} //self.camera.position.1 -= CAMERA_SPEED,
+            Event::WindowEvent {
+                event: WindowEvent::ReceivedCharacter('s'),
+                ..
+            } => {} //self.camera.position.1 += CAMERA_SPEED,
+            Event::WindowEvent {
+                event: WindowEvent::ReceivedCharacter('a'),
+                ..
+            } => {} //self.camera.position.0 -= CAMERA_SPEED,
+            Event::WindowEvent {
+                event: WindowEvent::ReceivedCharacter('d'),
+                ..
+            } => {} //self.camera.position.0 += CAMERA_SPEED,
+            Event::WindowEvent {
+                event: WindowEvent::ReceivedCharacter('q'),
+                ..
+            } => {} //self.camera.zoom_level /= ZOOM_FACTOR,
+            Event::WindowEvent {
+                event: WindowEvent::ReceivedCharacter('e'),
+                ..
+            } => {} //self.camera.zoom_level *= ZOOM_FACTOR,
             event => {
                 self.platform.handle_event(
                     self.imgui_context.io_mut(),
@@ -129,62 +129,57 @@ impl Renderer {
     }
 
     pub fn render(&mut self, universe: &Universe, display: &Display) {
-        let mut target = display.draw();
-        target.clear_color_srgb(1.0, 1.0, 1.0, 1.0);
-        self.platform
-            .prepare_render(&self.imgui_context.frame(), display.gl_window().window());
-        let draw_data = self.imgui_context.frame().render();
-        self.imgui_renderer
-            .render(&mut target, draw_data)
-            .expect("Rendering failed");
-        target.finish().expect("Faield to swap buffers");
+        let vertex1 = Vertex {
+            position: [-0.5, -0.5],
+        };
+        let vertex2 = Vertex {
+            position: [0.0, 0.5],
+        };
+        let vertex3 = Vertex {
+            position: [0.5, -0.25],
+        };
+        let shape = vec![vertex1, vertex2, vertex3];
 
-        self.platform
-            .prepare_frame(self.imgui_context.io_mut(), &display.gl_window().window())
-            .expect("Failed to prepare frame");
+        let vertex_buffer = glium::VertexBuffer::new(display, &shape).unwrap();
+        let indices = glium::index::NoIndices(glium::index::PrimitiveType::TrianglesList);
 
-        // UI
+        let vertex_shader = r#"
+            #version 140
 
-        const WHITE: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
-        const RED: [f32; 4] = [1.0, 0.0, 0.0, 1.0];
+            in vec2 position;
 
-        // Will draw channel 0 first, then channel 1, whatever the order of
-        // the calls in the code.
-        //
-        // Here, we draw a red line on channel 1 then a white circle on
-        // channel 0. As a result, the red line will always appear on top of
-        // the white circle.
+            void main() {
+                gl_Position = vec4(position, 0.0, 1.0);
+            }
+        
+        "#;
 
-        //self.imgui_context
-        //.frame()
-        //.get_window_draw_list()
-        //.channels_split(2, |channels| {
-        //const RADIUS: f32 = 100.0;
-        //let canvas_pos = self.imgui_context.frame().cursor_screen_pos();
-        //channels.set_current(1);
-        //self.imgui_context
-        //.frame()
-        //.get_window_draw_list()
-        //.add_line(
-        //canvas_pos,
-        //[canvas_pos[0] + RADIUS, canvas_pos[1] + RADIUS],
-        //RED,
-        //)
-        //.thickness(5.0)
-        //.build();
+        let fragment_shader = r#"
+            #version 140
 
-        //channels.set_current(0);
-        //let center = [canvas_pos[0] + RADIUS, canvas_pos[1] + RADIUS];
-        //self.imgui_context
-        //.frame()
-        //.get_window_draw_list()
-        //.add_circle(center, RADIUS, WHITE)
-        //.thickness(10.0)
-        //.num_segments(50)
-        //.build();
-        //});
+            out vec4 color;
 
-        // CELLS
+            void main() {
+                color = vec4(1.0, 0.0, 0.0, 1.0);
+            }
+        "#;
+
+        let program =
+            glium::Program::from_source(display, vertex_shader, fragment_shader, None).unwrap();
+
+        let mut frame = display.draw();
+        frame.clear_color(0.0, 0.0, 0.0, 1.0);
+        frame
+            .draw(
+                &vertex_buffer,
+                &indices,
+                &program,
+                &glium::uniforms::EmptyUniforms,
+                &Default::default(),
+            )
+            .unwrap();
+
+        frame.finish().unwrap();
 
         //let canvas = &mut self.canvas;
 
@@ -211,3 +206,10 @@ impl Renderer {
         //}
     }
 }
+
+#[derive(Copy, Clone)]
+struct Vertex {
+    position: [f32; 2],
+}
+
+glium::implement_vertex!(Vertex, position);
