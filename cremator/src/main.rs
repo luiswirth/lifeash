@@ -79,7 +79,7 @@ fn main() -> Result<()> {
     info!("starting simulator");
     let mut cremator = Cremator::new();
 
-    cremator.read_rls(ACORN_PATTERN);
+    cremator.read_rls(HALFMAX_PATTER);
 
     info!("start simulation loop");
     cremator.run();

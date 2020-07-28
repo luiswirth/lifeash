@@ -21,15 +21,16 @@ use imgui_winit_support::{HiDpiMode, WinitPlatform};
 //use super::camera::{Camera, CAMERA_SPEED, ZOOM_FACTOR};
 use la::{Cell, Universe};
 
-pub const CELL_SIZE: u32 = 10;
-pub const CELL_PADDING: u32 = 2;
+use super::cell_renderer;
+
+use cell_renderer::CellRenderer;
 
 pub struct Renderer {
     imgui_context: ImguiContext,
     platform: WinitPlatform,
     imgui_renderer: ImguiRenderer,
     font_size: f32,
-    //camera: Camera,
+    cell_renderer: CellRenderer,
 }
 
 impl Renderer {
@@ -75,14 +76,14 @@ impl Renderer {
         let imgui_renderer = ImguiRenderer::init(&mut imgui_context, display)
             .expect("Failed to create ImguiRenderer");
 
-        //let camera = Camera::new();
+        let cell_renderer = CellRenderer::new(display);
 
         Self {
             imgui_context,
             platform,
             imgui_renderer,
+            cell_renderer,
             font_size,
-            //camera,
         }
     }
 
@@ -129,87 +130,11 @@ impl Renderer {
     }
 
     pub fn render(&mut self, universe: &Universe, display: &Display) {
-        let vertex1 = Vertex {
-            position: [-0.5, -0.5],
-        };
-        let vertex2 = Vertex {
-            position: [0.0, 0.5],
-        };
-        let vertex3 = Vertex {
-            position: [0.5, -0.25],
-        };
-        let shape = vec![vertex1, vertex2, vertex3];
-
-        let vertex_buffer = glium::VertexBuffer::new(display, &shape).unwrap();
-        let indices = glium::index::NoIndices(glium::index::PrimitiveType::TrianglesList);
-
-        let vertex_shader = r#"
-            #version 140
-
-            in vec2 position;
-
-            void main() {
-                gl_Position = vec4(position, 0.0, 1.0);
-            }
-        
-        "#;
-
-        let fragment_shader = r#"
-            #version 140
-
-            out vec4 color;
-
-            void main() {
-                color = vec4(1.0, 0.0, 0.0, 1.0);
-            }
-        "#;
-
-        let program =
-            glium::Program::from_source(display, vertex_shader, fragment_shader, None).unwrap();
-
         let mut frame = display.draw();
         frame.clear_color(0.0, 0.0, 0.0, 1.0);
-        frame
-            .draw(
-                &vertex_buffer,
-                &indices,
-                &program,
-                &glium::uniforms::EmptyUniforms,
-                &Default::default(),
-            )
-            .unwrap();
+
+        self.cell_renderer.render(universe, display, &mut frame);
 
         frame.finish().unwrap();
-
-        //let canvas = &mut self.canvas;
-
-        //canvas.set_draw_color(Color::BLACK);
-        //canvas.clear();
-        //canvas.set_draw_color(Color::GREEN);
-
-        // calculate range in which we have to Universe::get_cell
-        //let x_range = self.camera.x_range(canvas.window());
-        //let y_range = self.camera.y_range(canvas.window());
-
-        //for y in y_range {
-        //for x in x_range.clone() {
-        //let alive = match universe.get_cell((x, y)) {
-        //Cell::Dead => false,
-        //Cell::Alive => true,
-        //};
-
-        //if alive {
-        //let rect = self.camera.project(canvas.window(), (x, y));
-        //canvas.fill_rect(rect).unwrap();
-        //}
-        //}
-        //}
     }
 }
-
-#[derive(Copy, Clone)]
-struct Vertex {
-    position: [f32; 2],
-}
-
-glium::implement_vertex!(Vertex, position);
