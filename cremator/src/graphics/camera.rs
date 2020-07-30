@@ -1,5 +1,3 @@
-use std::convert::TryFrom;
-
 use super::cell_renderer::{Vertex, CELL_PADDING, CELL_SIZE};
 use la::Position;
 
@@ -21,7 +19,7 @@ impl Camera {
 
     pub fn x_range(&self) -> std::ops::Range<i64> {
         let cell_size = (CELL_SIZE + CELL_PADDING) as f32 * self.zoom_level;
-        let x_count = 1.0 / cell_size;
+        let x_count = 2.0 / cell_size;
         let min = self.position.0 as i64 - (x_count / 2.0).ceil() as i64 - 1;
         let max = self.position.0 as i64 + (x_count / 2.0).ceil() as i64 + 1;
         min..max
@@ -29,7 +27,7 @@ impl Camera {
 
     pub fn y_range(&self) -> std::ops::Range<i64> {
         let cell_size = (CELL_SIZE + CELL_PADDING) as f32 * self.zoom_level;
-        let y_count = 1.0 / cell_size;
+        let y_count = 2.0 / cell_size;
         let min = self.position.1 as i64 - (y_count / 2.0).ceil() as i64 - 1;
         let max = self.position.1 as i64 + (y_count / 2.0).ceil() as i64 + 1;
         min..max

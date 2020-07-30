@@ -88,7 +88,7 @@ impl Cremator {
                 ..
             }
             | Event::WindowEvent {
-                event: WindowEvent::ReceivedCharacter('q'),
+                event: WindowEvent::ReceivedCharacter('x'),
                 ..
             } => *control_flow = ControlFlow::Exit,
             // hand over any left over events

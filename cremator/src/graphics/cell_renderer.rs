@@ -1,8 +1,13 @@
-use glium::{Display, Frame, Program, Surface};
+use glium::{
+    glutin::{
+        event::{Event, WindowEvent},
+        event_loop::ControlFlow,
+    },
+    Display, Frame, Program, Surface};
 
 use la::{Cell, Universe};
 
-use super::camera::Camera;
+use super::camera::{Camera, CAMERA_SPEED, ZOOM_FACTOR};
 
 pub const CELL_SIZE: f32 = 0.02;
 pub const CELL_PADDING: f32 = 0.005;
@@ -40,6 +45,36 @@ impl CellRenderer {
         let camera = Camera::new();
 
         CellRenderer { program, camera }
+    }
+
+    pub fn handle_event(&mut self, event: Event<()>, display: &Display) {
+        match event {
+            Event::WindowEvent {
+                event: WindowEvent::ReceivedCharacter('w'),
+                ..
+            } => self.camera.position.1 -= CAMERA_SPEED,
+            Event::WindowEvent {
+                event: WindowEvent::ReceivedCharacter('s'),
+                ..
+            } => self.camera.position.1 += CAMERA_SPEED,
+            Event::WindowEvent {
+                event: WindowEvent::ReceivedCharacter('a'),
+                ..
+            } => self.camera.position.0 -= CAMERA_SPEED,
+            Event::WindowEvent {
+                event: WindowEvent::ReceivedCharacter('d'),
+                ..
+            } => self.camera.position.0 += CAMERA_SPEED,
+            Event::WindowEvent {
+                event: WindowEvent::ReceivedCharacter('q'),
+                ..
+            } => self.camera.zoom_level /= ZOOM_FACTOR,
+            Event::WindowEvent {
+                event: WindowEvent::ReceivedCharacter('e'),
+                ..
+            } => self.camera.zoom_level *= ZOOM_FACTOR,
+            _ => {},
+        }
     }
 
     pub fn render(&mut self, universe: &Universe, display: &Display, target: &mut Frame) {
