@@ -52,12 +52,6 @@ impl Camera {
         // scale to zoom
         point = (point.0 * self.zoom_level, point.1 * self.zoom_level);
 
-        // translate to window center
-        //point += {
-        //let size = window.size();
-        //Point::new(size.0 as i32 / 2, size.1 as i32 / 2)
-        //};
-
         let half_size = CELL_SIZE * self.zoom_level / 2.0;
 
         let nw = Vertex::new(point.0 - half_size, point.1 + half_size);

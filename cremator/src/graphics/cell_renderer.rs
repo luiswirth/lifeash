@@ -1,9 +1,7 @@
 use glium::{
-    glutin::{
-        event::{Event, WindowEvent},
-        event_loop::ControlFlow,
-    },
-    Display, Frame, Program, Surface};
+    glutin::event::{Event, WindowEvent},
+    Display, Frame, Program, Surface,
+};
 
 use la::{Cell, Universe};
 
@@ -47,7 +45,7 @@ impl CellRenderer {
         CellRenderer { program, camera }
     }
 
-    pub fn handle_event(&mut self, event: Event<()>, display: &Display) {
+    pub fn handle_event(&mut self, event: Event<()>, _display: &Display) {
         match event {
             Event::WindowEvent {
                 event: WindowEvent::ReceivedCharacter('w'),
@@ -73,7 +71,7 @@ impl CellRenderer {
                 event: WindowEvent::ReceivedCharacter('e'),
                 ..
             } => self.camera.zoom_level *= ZOOM_FACTOR,
-            _ => {},
+            _ => {}
         }
     }
 
@@ -101,16 +99,6 @@ impl CellRenderer {
         println!("vertex array length: {}", vertices.len());
 
         let vertex_buffer = glium::VertexBuffer::new(display, &vertices).unwrap();
-
-        // TODO: use actual IndexBuffer
-        //let indices: Vec<u8> = vec![0, 1, 2, 3, 4, 5];
-
-        //let index_buffer = glium::index::IndexBuffer::new(
-        //display,
-        //glium::index::PrimitiveType::TrianglesList,
-        //&indices,
-        //)
-        //.unwrap();
 
         let index_buffer = glium::index::NoIndices(glium::index::PrimitiveType::TrianglesList);
 

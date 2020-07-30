@@ -18,7 +18,7 @@ use glium::{
         event_loop::{ControlFlow, EventLoop},
         window::WindowBuilder,
     },
-    Display, Surface,
+    Display,
 };
 
 use la::{Cell, Universe};
@@ -33,7 +33,7 @@ pub struct Cremator {
     universe: Universe,
 
     tick_count: u64,
-    last_tick: Instant,
+    _last_tick: Instant,
 }
 
 impl Cremator {
@@ -58,7 +58,7 @@ impl Cremator {
             renderer,
             universe,
             tick_count: 0,
-            last_tick: Instant::now(),
+            _last_tick: Instant::now(),
         }
     }
 
@@ -69,16 +69,16 @@ impl Cremator {
             mut renderer,
             mut universe,
             mut tick_count,
-            mut last_tick,
+            mut _last_tick,
         } = self;
         event_loop.run(move |event, _, control_flow| match event {
             // beginning
             Event::NewEvents(_) => {
-                last_tick = Instant::now();
+                _last_tick = Instant::now();
                 tick_count = tick_count.wrapping_add(1);
             }
             // updating
-            Event::MainEventsCleared => Self::update(&mut universe, &mut renderer, &mut tick_count),
+            Event::MainEventsCleared => Self::update(&mut universe, &mut renderer, &tick_count),
             // rendering
             Event::RedrawRequested(_) => Self::render(&mut renderer, &universe, &display),
             Event::RedrawEventsCleared => display.gl_window().window().request_redraw(),

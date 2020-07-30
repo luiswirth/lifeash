@@ -20,10 +20,6 @@ license = "MIT"
 lifeash = { path = "../lifeash" }
 
 glium = { version = "0.27.0", default-features = true }
-imgui = "0.4.0"
-imgui-glium-renderer = "0.4.0"
-imgui-winit-support = "0.4.0"
-#clipboard = "0.5.0"
 
 eyre = "0.6.0"
 color-eyre = { version = "0.5.0", features = [ "capture-spantrace"] }
