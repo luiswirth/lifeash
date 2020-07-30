@@ -1,106 +1,41 @@
-use sdl2::{
-    event::Event, keyboard::Keycode, pixels::Color, render::Canvas, video::Window, EventPump,
+#[allow(unused)]
+pub use tracing::{
+    debug, debug_span, error, error_span, info, info_span, instrument, trace, trace_span, warn,
+    warn_span,
 };
 
-use la::{Cell, Universe};
+use glium::{glutin::event::Event, Display, Surface};
 
-use super::camera::{Camera, CAMERA_SPEED, ZOOM_FACTOR};
+//use super::camera::{Camera, CAMERA_SPEED, ZOOM_FACTOR};
+use la::Universe;
 
-pub const CELL_SIZE: u32 = 10;
-pub const CELL_PADDING: u32 = 2;
+use super::cell_renderer;
+
+use cell_renderer::CellRenderer;
 
 pub struct Renderer {
-    canvas: Canvas<Window>,
-    event_pump: EventPump,
-    camera: Camera,
+    cell_renderer: CellRenderer,
 }
 
 impl Renderer {
-    pub fn new() -> Self {
-        // init sdl
-        let sdl_context = sdl2::init().unwrap();
-        let video_subsystem = sdl_context.video().unwrap();
+    pub fn init(display: &Display) -> Self {
+        let cell_renderer = CellRenderer::new(display);
 
-        let window = video_subsystem
-            .window(env!("CARGO_PKG_NAME"), 1600, 1200)
-            .position_centered()
-            .build()
-            .unwrap();
-
-        let canvas = window.into_canvas().build().unwrap();
-        let event_pump = sdl_context.event_pump().unwrap();
-
-        let camera = Camera::new();
-
-        Self {
-            canvas,
-            event_pump,
-            camera,
-        }
+        Self { cell_renderer }
     }
 
-    pub fn update(&mut self) {
-        for event in self.event_pump.poll_iter() {
-            match event {
-                Event::Quit { .. }
-                | Event::KeyDown {
-                    keycode: Some(Keycode::Escape),
-                    ..
-                } => std::process::exit(0),
-                Event::KeyDown {
-                    keycode: Some(Keycode::W),
-                    ..
-                } => self.camera.position.1 -= CAMERA_SPEED,
-                Event::KeyDown {
-                    keycode: Some(Keycode::S),
-                    ..
-                } => self.camera.position.1 += CAMERA_SPEED,
-                Event::KeyDown {
-                    keycode: Some(Keycode::A),
-                    ..
-                } => self.camera.position.0 -= CAMERA_SPEED,
-                Event::KeyDown {
-                    keycode: Some(Keycode::D),
-                    ..
-                } => self.camera.position.0 += CAMERA_SPEED,
-                Event::KeyDown {
-                    keycode: Some(Keycode::E),
-                    ..
-                } => self.camera.zoom_level *= ZOOM_FACTOR,
-                Event::KeyDown {
-                    keycode: Some(Keycode::Q),
-                    ..
-                } => self.camera.zoom_level /= ZOOM_FACTOR,
-                _ => {}
-            }
-        }
+    pub fn handle_event(&mut self, event: Event<()>, display: &Display) {
+        self.cell_renderer.handle_event(event, display)
     }
 
-    pub fn render(&mut self, universe: &Universe) {
-        let canvas = &mut self.canvas;
+    pub fn update(&mut self) {}
 
-        canvas.set_draw_color(Color::BLACK);
-        canvas.clear();
-        canvas.set_draw_color(Color::GREEN);
+    pub fn render(&mut self, universe: &Universe, display: &Display) {
+        let mut frame = display.draw();
+        frame.clear_color(0.0, 0.0, 0.0, 1.0);
 
-        // calculate range in which we have to Universe::get_cell
-        let x_range = self.camera.x_range(canvas.window());
-        let y_range = self.camera.y_range(canvas.window());
+        self.cell_renderer.render(universe, display, &mut frame);
 
-        for y in y_range {
-            for x in x_range.clone() {
-                let alive = match universe.get_cell((x, y)) {
-                    Cell::Dead => false,
-                    Cell::Alive => true,
-                };
-
-                if alive {
-                    let rect = self.camera.project(canvas.window(), (x, y));
-                    canvas.fill_rect(rect).unwrap();
-                }
-            }
-        }
-
-        canvas.present();
+        frame.finish().unwrap();
     }
 }
