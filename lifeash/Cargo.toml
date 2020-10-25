@@ -16,3 +16,4 @@ categories = [ "simulation" ]
 license = "MIT"
 
 [dependencies]
+bimap = "0.5.2"

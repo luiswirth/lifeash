@@ -50,7 +50,7 @@ impl Cremator {
 
         // universe creation
         let mut universe = Universe::new();
-        universe.initalize();
+        universe.initialize();
 
         Cremator {
             display,

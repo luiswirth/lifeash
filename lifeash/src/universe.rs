@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use bimap::BiMap;
 
 use crate::{
     core::{Cell, Level, Position, Quadrant::*},
@@ -7,7 +7,7 @@ use crate::{
 
 #[derive(Default)]
 pub struct Universe {
-    table: HashMap<Id, Node>,
+    table: BiMap<Id, Node>,
     root: Option<Id>,
     generation: usize,
 }
@@ -17,7 +17,7 @@ pub struct Id(usize);
 
 impl Id {
     fn node(self, univ: &Universe) -> &Node {
-        univ.table.get(&self).unwrap()
+        univ.table.get_by_left(&self).unwrap()
     }
 
     #[allow(dead_code)]
@@ -41,27 +41,23 @@ impl Id {
 impl Universe {
     pub fn new() -> Self {
         Self {
-            table: HashMap::new(),
+            table: BiMap::new(),
             root: None,
             generation: 0,
         }
     }
 
     // TODO: remove
-    pub fn initalize(&mut self) {
+    pub fn initialize(&mut self) {
         self.root = Some(self.new_empty_tree(Level::new(3)));
     }
 }
 
 impl Universe {
     fn get_id(&mut self, node: Node) -> Id {
-        if let Some(id) = self
-            .table
-            .iter()
-            .find_map(|(i, n)| if *n == node { Some(i) } else { None })
-            .copied()
+        if let Some(id) = self.table.get_by_right(&node)
         {
-            id
+            *id
         } else {
             let id = Id(self.table.len());
             self.table.insert(id, node);
@@ -262,9 +258,9 @@ impl Universe {
             };
             let result = self.new_inode(nw, ne, sw, se);
 
-            // TODO have mutable way of changing this
-            if let Node::Inode(inode) = self.table.get_mut(&tree).unwrap() {
+            if let (id, Node::Inode(mut inode)) = self.table.remove_by_left(&tree).unwrap() {
                 inode.result = Some(result);
+                self.table.insert(id, Node::Inode(inode));
             }
 
             result
